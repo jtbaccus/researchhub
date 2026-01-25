@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "dgSpecHash": "4HGUS8I9iC8=",
+  "success": true,
+  "projectFilePath": "/home/jontb/turing/projects/researchhub/tests/ResearchHub.Core.Tests/ResearchHub.Core.Tests.csproj",
+  "expectedPackageFiles": [
+    "/home/jontb/.nuget/packages/communitytoolkit.mvvm/8.4.0/communitytoolkit.mvvm.8.4.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/coverlet.collector/6.0.2/coverlet.collector.6.0.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/csvhelper/33.1.0/csvhelper.33.1.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/fluentassertions/8.8.0/fluentassertions.8.8.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/microsoft.codecoverage/17.12.0/microsoft.codecoverage.17.12.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/microsoft.net.test.sdk/17.12.0/microsoft.net.test.sdk.17.12.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/microsoft.testplatform.objectmodel/17.12.0/microsoft.testplatform.objectmodel.17.12.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/microsoft.testplatform.testhost/17.12.0/microsoft.testplatform.testhost.17.12.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/newtonsoft.json/13.0.1/newtonsoft.json.13.0.1.nupkg.sha512",
+    "/home/jontb/.nuget/packages/system.reflection.metadata/1.6.0/system.reflection.metadata.1.6.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit/2.9.2/xunit.2.9.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.abstractions/2.0.3/xunit.abstractions.2.0.3.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.analyzers/1.16.0/xunit.analyzers.1.16.0.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.assert/2.9.2/xunit.assert.2.9.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.core/2.9.2/xunit.core.2.9.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.extensibility.core/2.9.2/xunit.extensibility.core.2.9.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.extensibility.execution/2.9.2/xunit.extensibility.execution.2.9.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/xunit.runner.visualstudio/2.8.2/xunit.runner.visualstudio.2.8.2.nupkg.sha512",
+    "/home/jontb/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.11/microsoft.aspnetcore.app.ref.9.0.11.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,13 @@
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/bin/Debug/net9.0/ResearchHub.Core.deps.json
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/bin/Debug/net9.0/ResearchHub.Core.dll
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/bin/Debug/net9.0/ResearchHub.Core.pdb
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.csproj.AssemblyReference.cache
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.GeneratedMSBuildEditorConfig.editorconfig
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.AssemblyInfoInputs.cache
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.AssemblyInfo.cs
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.csproj.CoreCompileInputs.cache
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.sourcelink.json
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.dll
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/refint/ResearchHub.Core.dll
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ResearchHub.Core.pdb
+/home/jontb/turing/projects/researchhub/src/ResearchHub.Core/obj/Debug/net9.0/ref/ResearchHub.Core.dll

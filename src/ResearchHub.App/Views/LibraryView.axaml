@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ResearchHub.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="ResearchHub.App.Views.LibraryView"
+             x:DataType="vm:LibraryViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <Button Content="Import" Command="{Binding ImportFileCommand}" Padding="15,8"/>
+                    <Button Content="Export RIS" Command="{Binding ExportReferencesCommand}"
+                            CommandParameter="ris" Padding="15,8"/>
+                    <Button Content="Export BibTeX" Command="{Binding ExportReferencesCommand}"
+                            CommandParameter="bib" Padding="15,8"/>
+                    <Button Content="Refresh" Command="{Binding RefreshLibraryCommand}" Padding="15,8"/>
+                </StackPanel>
+
+                <TextBox Grid.Column="1" Text="{Binding SearchText}"
+                         Watermark="Search references..."
+                         Width="250" Padding="10,8"/>
+            </Grid>
+        </Border>
+
+        <!-- Stats Bar -->
+        <Border Grid.Row="1" Padding="10,5">
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <TextBlock>
+                    <Run Text="Total: "/>
+                    <Run Text="{Binding TotalReferences}" FontWeight="Bold"/>
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Showing: "/>
+                    <Run Text="{Binding FilteredCount}" FontWeight="Bold"/>
+                </TextBlock>
+                <TextBlock Text="{Binding ImportStatus}" Foreground="Green"
+                           IsVisible="{Binding ImportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content: Reference List + Detail View -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,350">
+            <!-- Reference List -->
+            <DataGrid Grid.Column="0" ItemsSource="{Binding FilteredReferences}"
+                      SelectedItem="{Binding SelectedReference}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="Horizontal"
+                      CanUserReorderColumns="True"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="60"/>
+                    <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
+                    <DataGridTextColumn Header="Authors" Binding="{Binding Authors[0]}" Width="150"/>
+                    <DataGridTextColumn Header="Journal" Binding="{Binding Journal}" Width="150"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Detail View -->
+            <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    Padding="15" Margin="10,0,0,0">
+                <ScrollViewer IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="10" DataContext="{Binding SelectedReference}">
+                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/>
+
+                        <TextBlock Text="{Binding Authors, Converter={x:Static vm:LibraryViewModel.AuthorsConverter}}"
+                                   FontStyle="Italic" TextWrapping="Wrap"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="{Binding Journal}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Year, StringFormat='({0})'}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding Volume, StringFormat='Volume {0}'}"
+                                   IsVisible="{Binding Volume, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <TextBlock Text="{Binding Doi, StringFormat='DOI: {0}'}"
+                                   IsVisible="{Binding Doi, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <TextBlock Text="{Binding Pmid, StringFormat='PMID: {0}'}"
+                                   IsVisible="{Binding Pmid, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <Separator Margin="0,10"/>
+
+                        <TextBlock Text="Abstract" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Abstract}" TextWrapping="Wrap" MaxHeight="300"/>
+
+                        <Separator Margin="0,10"/>
+
+                        <Button Content="Delete Reference"
+                                Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).DeleteReferenceCommand}"
+                                HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Loading Indicator -->
+        <Border Grid.Row="2" Background="#80000000"
+                IsVisible="{Binding IsLoading}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200"/>
+                <TextBlock Text="Loading..." Foreground="White" Margin="0,10"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

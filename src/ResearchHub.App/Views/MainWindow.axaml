@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ResearchHub.App.ViewModels"
+        xmlns:views="using:ResearchHub.App.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="ResearchHub.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="ResearchHub - Research Workflow Manager"
+        Width="1200" Height="800"
+        MinWidth="900" MinHeight="600">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Top Navigation Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="ResearchHub"
+                           FontSize="20" FontWeight="Bold"
+                           Foreground="White" VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Spacing="5">
+                    <Button Content="Dashboard" Command="{Binding NavigateToDashboardCommand}"
+                            Classes="nav" />
+                    <Button Content="Library" Command="{Binding NavigateToLibraryCommand}"
+                            IsEnabled="{Binding HasProject}" Classes="nav" />
+                    <Button Content="Screening" Command="{Binding NavigateToScreeningCommand}"
+                            IsEnabled="{Binding HasProject}" Classes="nav" />
+                    <Button Content="Extraction" Command="{Binding NavigateToExtractionCommand}"
+                            IsEnabled="{Binding HasProject}" Classes="nav" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding CurrentProject.Title, FallbackValue='No Project'}"
+                               Foreground="White" VerticalAlignment="Center"/>
+                    <Button Content="+ New Project" Command="{Binding NewProjectCommand}" Classes="nav" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area -->
+        <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="10">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:DashboardViewModel">
+                    <views:DashboardView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:LibraryViewModel">
+                    <views:LibraryView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ScreeningViewModel">
+                    <views:ScreeningView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ExtractionViewModel">
+                    <views:ExtractionView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                Padding="10,5">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12"/>
+        </Border>
+    </Grid>
+
+    <Window.Styles>
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#40FFFFFF"/>
+        </Style>
+    </Window.Styles>
+</Window>

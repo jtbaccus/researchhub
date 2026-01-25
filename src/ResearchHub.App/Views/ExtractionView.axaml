@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ResearchHub.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="ResearchHub.App.Views.ExtractionView"
+             x:DataType="vm:ExtractionViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <ComboBox ItemsSource="{Binding Schemas}"
+                              SelectedItem="{Binding SelectedSchema}"
+                              DisplayMemberBinding="{Binding Name}"
+                              PlaceholderText="Select extraction schema"
+                              Width="250"/>
+                    <Button Content="Create Schema" Command="{Binding CreateSchemaCommand}" Padding="15,8"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                    <Button Content="Save" Command="{Binding SaveExtractionCommand}" Padding="15,8"/>
+                    <Button Content="Export CSV" Command="{Binding ExportDataCommand}" Padding="15,8"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" ColumnDefinitions="300,*">
+            <!-- Reference List -->
+            <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    Padding="10">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Grid.Row="0" Text="Included References" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding IncludedReferences}"
+                             SelectedItem="{Binding SelectedReference}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Year, StringFormat='({0})'}"
+                                               FontSize="11" Foreground="Gray"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Extraction Form -->
+            <Border Grid.Column="1" Padding="20">
+                <Grid>
+                    <!-- Schema Selected: Show Form -->
+                    <ScrollViewer IsVisible="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Spacing="15">
+                            <!-- Selected Reference Info -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                    CornerRadius="8" Padding="15"
+                                    IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel DataContext="{Binding SelectedReference}">
+                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Authors[0]}" FontStyle="Italic" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Extraction Fields -->
+                            <TextBlock Text="Data Extraction Form" FontSize="18" FontWeight="Bold" Margin="0,10,0,0"/>
+
+                            <ItemsControl ItemsSource="{Binding SelectedSchema.Columns}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,10">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray"
+                                                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                            <TextBox Margin="0,5,0,0" TextWrapping="Wrap" AcceptsReturn="True"
+                                                     MinHeight="30"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- No Schema Selected -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                IsVisible="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="No Extraction Schema Selected" FontSize="18" FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Select or create an extraction schema to begin data extraction."
+                                   FontSize="14" Foreground="Gray" HorizontalAlignment="Center"
+                                   Margin="0,10,0,0"/>
+                        <Button Content="Create New Schema"
+                                Command="{Binding CreateSchemaCommand}"
+                                HorizontalAlignment="Center" Margin="0,20,0,0"
+                                Padding="20,10"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Loading Indicator -->
+        <Border Grid.RowSpan="2" Background="#80000000"
+                IsVisible="{Binding IsLoading}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200"/>
+                <TextBlock Text="Loading..." Foreground="White" Margin="0,10"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
