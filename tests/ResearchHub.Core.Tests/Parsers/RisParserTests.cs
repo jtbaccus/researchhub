@@ -129,6 +129,55 @@ ER  -
     }
 
     [Fact]
+    public void Parse_WithContinuationLines_AppendsToPreviousValue()
+    {
+        var content = @"TY  - JOUR
+TI  - A Very Long Title
+      That Continues On Next Line
+AB  - First line of abstract
+      second line of abstract
+ER  -
+";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Title.Should().Be("A Very Long Title That Continues On Next Line");
+        references[0].Abstract.Should().Be("First line of abstract second line of abstract");
+    }
+
+    [Fact]
+    public void Parse_WithLowercaseTags_ParsesCorrectly()
+    {
+        var content = @"ty  - JOUR
+ti  - Lowercase Title
+au  - Author One
+er  -
+";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Title.Should().Be("Lowercase Title");
+        references[0].Authors.Should().ContainSingle().Which.Should().Be("Author One");
+    }
+
+    [Fact]
+    public void Parse_WithPageRangeTag_UsesPg()
+    {
+        var content = @"TY  - JOUR
+TI  - Page Range Article
+PG  - 55-60
+ER  -
+";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Pages.Should().Be("55-60");
+    }
+
+    [Fact]
     public void Format_ReturnsRIS()
     {
         _parser.Format.Should().Be("RIS");

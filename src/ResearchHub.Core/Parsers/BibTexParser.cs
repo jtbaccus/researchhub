@@ -11,13 +11,13 @@ public class BibTexParser : IReferenceParser
 
     // Matches @type{key, ... }
     private static readonly Regex EntryPattern = new(
-        @"@(\w+)\s*\{\s*([^,]*),",
+        @"@(\w+)\s*[\{\(]\s*([^,]*),",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // Matches field = {value} or field = "value" or field = value
-    private static readonly Regex FieldPattern = new(
-        @"(\w+)\s*=\s*(?:\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}|""([^""]*)""|(\d+))",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // Matches field names; values are parsed with a small state machine to support nesting and concatenation.
+    private static readonly Regex FieldNamePattern = new(
+        @"([A-Za-z][A-Za-z0-9_:-]*)",
+        RegexOptions.Compiled);
 
     public IEnumerable<Reference> Parse(string content)
     {
@@ -50,36 +50,44 @@ public class BibTexParser : IReferenceParser
     private static IEnumerable<string> SplitIntoEntries(string content)
     {
         var entries = new List<string>();
-        var depth = 0;
+        var braceDepth = 0;
+        var parenDepth = 0;
         var currentEntry = new StringBuilder();
         var inEntry = false;
+        var seenOpening = false;
 
         foreach (var ch in content)
         {
-            if (ch == '@' && depth == 0)
+            if (ch == '@' && !inEntry && braceDepth == 0 && parenDepth == 0)
             {
-                if (inEntry && currentEntry.Length > 0)
-                {
-                    entries.Add(currentEntry.ToString());
-                    currentEntry.Clear();
-                }
                 inEntry = true;
+                seenOpening = false;
             }
 
             if (inEntry)
             {
                 currentEntry.Append(ch);
                 if (ch == '{')
-                    depth++;
-                else if (ch == '}')
                 {
-                    depth--;
-                    if (depth == 0)
-                    {
-                        entries.Add(currentEntry.ToString());
-                        currentEntry.Clear();
-                        inEntry = false;
-                    }
+                    braceDepth++;
+                    seenOpening = true;
+                }
+                else if (ch == '}')
+                    braceDepth = Math.Max(0, braceDepth - 1);
+                else if (ch == '(')
+                {
+                    parenDepth++;
+                    seenOpening = true;
+                }
+                else if (ch == ')')
+                    parenDepth = Math.Max(0, parenDepth - 1);
+
+                if (seenOpening && braceDepth == 0 && parenDepth == 0)
+                {
+                    entries.Add(currentEntry.ToString());
+                    currentEntry.Clear();
+                    inEntry = false;
+                    seenOpening = false;
                 }
             }
         }
@@ -102,18 +110,7 @@ public class BibTexParser : IReferenceParser
         if (entryType is "string" or "comment" or "preamble")
             return null;
 
-        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var fieldMatches = FieldPattern.Matches(entry);
-
-        foreach (Match match in fieldMatches)
-        {
-            var fieldName = match.Groups[1].Value;
-            var value = match.Groups[2].Success ? match.Groups[2].Value
-                      : match.Groups[3].Success ? match.Groups[3].Value
-                      : match.Groups[4].Value;
-
-            fields[fieldName] = CleanLatex(value);
-        }
+        var fields = ParseFields(entry);
 
         var title = GetField(fields, "title");
         if (string.IsNullOrWhiteSpace(title))
@@ -153,6 +150,162 @@ public class BibTexParser : IReferenceParser
         return reference;
     }
 
+    private static Dictionary<string, string> ParseFields(string entry)
+    {
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var openIndex = entry.IndexOf('{');
+        var openParenIndex = entry.IndexOf('(');
+        var startIndex = openIndex >= 0 && (openParenIndex < 0 || openIndex < openParenIndex) ? openIndex : openParenIndex;
+        if (startIndex < 0)
+            return fields;
+
+        // Skip entry key: find first comma after the opening brace/paren.
+        var index = entry.IndexOf(',', startIndex);
+        if (index < 0)
+            return fields;
+        index++;
+
+        while (index < entry.Length)
+        {
+            index = SkipWhitespace(entry, index);
+            if (index >= entry.Length)
+                break;
+
+            var ch = entry[index];
+            if (ch == '}' || ch == ')')
+                break;
+
+            var nameMatch = FieldNamePattern.Match(entry, index);
+            if (!nameMatch.Success || nameMatch.Index != index)
+                break;
+
+            var fieldName = nameMatch.Groups[1].Value;
+            index = nameMatch.Index + nameMatch.Length;
+
+            index = SkipWhitespace(entry, index);
+            if (index >= entry.Length || entry[index] != '=')
+                break;
+            index++;
+
+            var value = ParseValue(entry, ref index);
+            if (!string.IsNullOrWhiteSpace(fieldName) && value != null)
+                fields[fieldName] = CleanLatex(value);
+
+            // Move past trailing comma if present.
+            index = SkipWhitespace(entry, index);
+            if (index < entry.Length && entry[index] == ',')
+                index++;
+        }
+
+        return fields;
+    }
+
+    private static int SkipWhitespace(string input, int index)
+    {
+        while (index < input.Length && char.IsWhiteSpace(input[index]))
+            index++;
+        return index;
+    }
+
+    private static string? ParseValue(string input, ref int index)
+    {
+        index = SkipWhitespace(input, index);
+        if (index >= input.Length)
+            return null;
+
+        var parts = new List<string>();
+        while (index < input.Length)
+        {
+            index = SkipWhitespace(input, index);
+            if (index >= input.Length)
+                break;
+
+            var ch = input[index];
+            if (ch == '{')
+            {
+                parts.Add(ParseBraced(input, ref index));
+            }
+            else if (ch == '"')
+            {
+                parts.Add(ParseQuoted(input, ref index));
+            }
+            else
+            {
+                parts.Add(ParseBare(input, ref index));
+            }
+
+            index = SkipWhitespace(input, index);
+            if (index < input.Length && input[index] == '#')
+            {
+                index++;
+                continue;
+            }
+            break;
+        }
+
+        return parts.Count == 0 ? null : string.Concat(parts);
+    }
+
+    private static string ParseBraced(string input, ref int index)
+    {
+        var depth = 0;
+        var start = index;
+        while (index < input.Length)
+        {
+            var ch = input[index];
+            if (ch == '{')
+                depth++;
+            else if (ch == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    var value = input.Substring(start + 1, index - start - 1);
+                    index++;
+                    return value;
+                }
+            }
+            index++;
+        }
+
+        return input.Substring(start + 1);
+    }
+
+    private static string ParseQuoted(string input, ref int index)
+    {
+        var start = ++index;
+        var escaped = false;
+        while (index < input.Length)
+        {
+            var ch = input[index];
+            if (!escaped && ch == '"')
+            {
+                var value = input.Substring(start, index - start);
+                index++;
+                return value;
+            }
+            escaped = !escaped && ch == '\\';
+            index++;
+        }
+
+        return input.Substring(start);
+    }
+
+    private static string ParseBare(string input, ref int index)
+    {
+        var start = index;
+        while (index < input.Length)
+        {
+            var ch = input[index];
+            if (ch == ',' || ch == '}' || ch == ')' || ch == '#')
+                break;
+            index++;
+        }
+
+        return input.Substring(start, index - start).Trim();
+    }
+
     private static string? GetField(Dictionary<string, string> fields, params string[] keys)
     {
         foreach (var key in keys)
@@ -177,7 +330,7 @@ public class BibTexParser : IReferenceParser
     private static List<string> ParseAuthors(string authors)
     {
         // BibTeX uses "and" to separate authors
-        return authors.Split(new[] { " and " }, StringSplitOptions.RemoveEmptyEntries)
+        return authors.Split(new[] { " and ", " AND ", "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
                      .Select(a => a.Trim())
                      .Where(a => !string.IsNullOrEmpty(a))
                      .ToList();
@@ -196,6 +349,10 @@ public class BibTexParser : IReferenceParser
 
         // Remove \'{e} style accents -> just the letter
         result = Regex.Replace(result, @"\\['`^""~=.][{]?([a-zA-Z])[}]?", "$1");
+
+        // Common escaped symbols
+        result = result.Replace(@"\&", "&");
+        result = result.Replace(@"\%", "%");
 
         // Remove remaining braces (used for case preservation)
         result = result.Replace("{", "").Replace("}", "");

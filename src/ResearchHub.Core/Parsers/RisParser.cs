@@ -9,12 +9,13 @@ public class RisParser : IReferenceParser
     public string Format => "RIS";
     public string[] SupportedExtensions => new[] { ".ris" };
 
-    private static readonly Regex TagPattern = new(@"^([A-Z][A-Z0-9])  - ?(.*)$", RegexOptions.Compiled);
+    private static readonly Regex TagPattern = new(@"^([A-Z][A-Z0-9])\s*-\s?(.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public IEnumerable<Reference> Parse(string content)
     {
         var references = new List<Reference>();
         var currentRef = new Dictionary<string, List<string>>();
+        string? lastTag = null;
 
         var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
@@ -26,7 +27,7 @@ public class RisParser : IReferenceParser
             var match = TagPattern.Match(line);
             if (match.Success)
             {
-                var tag = match.Groups[1].Value;
+                var tag = match.Groups[1].Value.ToUpperInvariant();
                 var value = match.Groups[2].Value;
 
                 if (tag == "ER")
@@ -38,12 +39,26 @@ public class RisParser : IReferenceParser
                             references.Add(reference);
                         currentRef.Clear();
                     }
+                    lastTag = null;
                 }
                 else
                 {
+                    var trimmed = value.Trim();
                     if (!currentRef.ContainsKey(tag))
                         currentRef[tag] = new List<string>();
-                    currentRef[tag].Add(value);
+                    if (trimmed.Length > 0)
+                        currentRef[tag].Add(trimmed);
+                    lastTag = tag;
+                }
+            }
+            else if (lastTag != null && char.IsWhiteSpace(line[0]))
+            {
+                // RIS continuation lines begin with whitespace and extend the previous tag value.
+                var continuation = line.Trim();
+                if (continuation.Length > 0)
+                {
+                    var list = currentRef[lastTag];
+                    list[list.Count - 1] = $"{list[list.Count - 1]} {continuation}".Trim();
                 }
             }
         }
@@ -85,9 +100,9 @@ public class RisParser : IReferenceParser
             Year = ParseYear(GetFirstValue(tags, "PY", "Y1", "DA")),
             Volume = GetFirstValue(tags, "VL"),
             Issue = GetFirstValue(tags, "IS"),
-            Pages = FormatPages(GetFirstValue(tags, "SP"), GetFirstValue(tags, "EP")),
-            Doi = GetFirstValue(tags, "DO", "DOI"),
-            Pmid = GetFirstValue(tags, "PMID", "AN"),
+            Pages = GetPages(tags),
+            Doi = GetFirstValue(tags, "DO"),
+            Pmid = GetFirstValue(tags, "PM", "AN"),
             Url = GetFirstValue(tags, "UR", "L1", "L2")
         };
 
@@ -139,5 +154,16 @@ public class RisParser : IReferenceParser
             return startPage;
 
         return $"{startPage}-{endPage}";
+    }
+
+    private static string? GetPages(Dictionary<string, List<string>> tags)
+    {
+        var pages = GetFirstValue(tags, "PG");
+        if (!string.IsNullOrWhiteSpace(pages))
+            return pages;
+
+        var start = GetFirstValue(tags, "SP");
+        var end = GetFirstValue(tags, "EP");
+        return FormatPages(start, end);
     }
 }

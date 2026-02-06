@@ -118,6 +118,51 @@ public class BibTexParserTests
     }
 
     [Fact]
+    public void Parse_WithParenthesisEntry_ParsesCorrectly()
+    {
+        var content = @"@article(parenthetical,
+  title = {Parenthesis Entry},
+  year = 2024
+)";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Title.Should().Be("Parenthesis Entry");
+        references[0].Year.Should().Be(2024);
+    }
+
+    [Fact]
+    public void Parse_WithConcatenatedValues_CombinesParts()
+    {
+        var content = @"@article{concat,
+  title = {A Study} # { on} # "" BibTeX"",
+  author = {Author One and Author Two}
+}";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Title.Should().Be("A Study on BibTeX");
+        references[0].Authors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_WithMultilineQuotedField_ParsesValue()
+    {
+        var content = @"@article{multiline,
+  title = ""A title with a comma,
+and a second line"",
+  year = 2024
+}";
+
+        var references = _parser.Parse(content).ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Title.Should().Be("A title with a comma, and a second line");
+    }
+
+    [Fact]
     public void Parse_SkipsCommentAndStringEntries()
     {
         var content = @"@string{jair = {Journal of AI Research}}

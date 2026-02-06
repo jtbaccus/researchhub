@@ -6,7 +6,7 @@ Cross-platform desktop application for managing the full systematic review workf
 
 **MVP Complete** — 2026-01-25
 
-- All 28 unit tests passing
+- All 78 unit tests passing (including 44 parser stress tests)
 - Application builds and runs successfully
 - Ready for testing with real data
 
@@ -28,7 +28,7 @@ researchhub/
 │   ├── ResearchHub.Services/    # Business logic
 │   └── ResearchHub.App/         # Avalonia desktop app
 └── tests/
-    └── ResearchHub.Core.Tests/  # Unit tests (28 tests)
+    └── ResearchHub.Core.Tests/  # Unit tests (78 tests)
 ```
 
 ## Features
@@ -38,6 +38,15 @@ researchhub/
 - View/edit reference metadata (title, authors, abstract, DOI, PMID)
 - Tagging and organization
 - Export to RIS/BibTeX
+
+### Parser Coverage (RIS/BibTeX)
+- Continuation lines and multiline fields
+- Lowercase RIS tags and alternative tags (e.g., `T1`, `N2`, `PG`, `PM`)
+- BibTeX parentheses entries and value concatenation with `#`
+- Nested braces and common LaTeX cleanup
+- Multiline quoted values and comma-containing fields
+
+See `docs/parsers.md` for supported edge cases and behaviors.
 
 ### Screening Workspace
 - Title/abstract screening queue
