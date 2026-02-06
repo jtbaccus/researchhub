@@ -6,6 +6,7 @@ using ResearchHub.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,6 +28,10 @@ public partial class LibraryViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _importStatus = string.Empty;
+
+    public ObservableCollection<ReferencePdf> PdfAttachments { get; } = new();
+
+    public bool HasPdfAttachments => PdfAttachments.Count > 0;
 
     public ObservableCollection<Reference> References { get; } = new();
     public ObservableCollection<Reference> FilteredReferences { get; } = new();
@@ -142,6 +147,59 @@ public partial class LibraryViewModel : ViewModelBase
     private async Task RefreshLibrary()
     {
         await LoadReferencesAsync();
+    }
+
+    partial void OnSelectedReferenceChanged(Reference? value)
+    {
+        _ = LoadPdfsForSelectedReferenceAsync();
+    }
+
+    private async Task LoadPdfsForSelectedReferenceAsync()
+    {
+        PdfAttachments.Clear();
+        OnPropertyChanged(nameof(HasPdfAttachments));
+
+        if (SelectedReference == null || App.PdfAttachmentService == null) return;
+
+        var pdfs = await App.PdfAttachmentService.GetPdfsAsync(SelectedReference.Id);
+        foreach (var pdf in pdfs)
+        {
+            PdfAttachments.Add(pdf);
+        }
+        OnPropertyChanged(nameof(HasPdfAttachments));
+    }
+
+    [RelayCommand]
+    private async Task AttachPdf(string filePath)
+    {
+        if (SelectedReference == null || App.PdfAttachmentService == null) return;
+
+        await App.PdfAttachmentService.AddPdfAsync(SelectedReference.Id, filePath);
+        await LoadPdfsForSelectedReferenceAsync();
+        _mainViewModel.StatusMessage = "PDF attached.";
+    }
+
+    [RelayCommand]
+    private async Task RemovePdf(ReferencePdf? pdf)
+    {
+        if (pdf == null || App.PdfAttachmentService == null) return;
+
+        await App.PdfAttachmentService.RemovePdfAsync(pdf.Id);
+        await LoadPdfsForSelectedReferenceAsync();
+        _mainViewModel.StatusMessage = "PDF removed.";
+    }
+
+    [RelayCommand]
+    private void OpenPdf(ReferencePdf? pdf)
+    {
+        if (pdf == null || App.PdfAttachmentService == null) return;
+
+        var path = App.PdfAttachmentService.GetAbsolutePath(pdf);
+        try
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch { }
     }
 
     public static FuncValueConverter<List<string>?, string> AuthorsConverter { get; } =

@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private LibraryViewModel? _libraryViewModel;
     private ScreeningViewModel? _screeningViewModel;
     private ExtractionViewModel? _extractionViewModel;
+    private PrismaViewModel? _prismaViewModel;
 
     public MainWindowViewModel()
     {
@@ -102,5 +103,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!HasProject) return;
         _extractionViewModel = new ExtractionViewModel(this);
         CurrentView = _extractionViewModel;
+    }
+
+    [RelayCommand]
+    private void NavigateToPrisma()
+    {
+        if (!HasProject) return;
+        _prismaViewModel = new PrismaViewModel(this);
+        CurrentView = _prismaViewModel;
     }
 }

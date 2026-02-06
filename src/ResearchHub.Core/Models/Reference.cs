@@ -23,6 +23,7 @@ public class Reference
     public string? SourceFile { get; set; }
 
     public Project? Project { get; set; }
+    public ICollection<ReferencePdf> PdfAttachments { get; set; } = new List<ReferencePdf>();
     public ICollection<ScreeningDecision> ScreeningDecisions { get; set; } = new List<ScreeningDecision>();
     public ICollection<ExtractionRow> ExtractionRows { get; set; } = new List<ExtractionRow>();
 }

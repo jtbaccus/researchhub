@@ -47,6 +47,27 @@ public partial class LibraryView : UserControl
             await vm.ImportFileCommand.ExecuteAsync(files[0]);
         }
     }
+
+    public async void AttachPdfButton_Click(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null || DataContext is not LibraryViewModel vm) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Attach PDF",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("PDF Files") { Patterns = new[] { "*.pdf" } }
+            }
+        });
+
+        if (files.Count > 0)
+        {
+            await vm.AttachPdfCommand.ExecuteAsync(files[0].Path.LocalPath);
+        }
+    }
 }
 
 public static class AuthorsConverterHelper

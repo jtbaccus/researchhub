@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
+             x:Class="ResearchHub.App.Controls.PdfViewerControl"
+             x:CompileBindings="False">
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Padding="8,4"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Page navigation -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Content="&lt;" Click="PreviousPage_Click" Padding="8,4"
+                            FontWeight="Bold" MinWidth="30"/>
+                    <TextBlock x:Name="PageIndicator" Text="0 / 0"
+                               VerticalAlignment="Center" FontSize="12"/>
+                    <Button Content="&gt;" Click="NextPage_Click" Padding="8,4"
+                            FontWeight="Bold" MinWidth="30"/>
+                </StackPanel>
+
+                <!-- Zoom controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Content="-" Click="ZoomOut_Click" Padding="8,4"
+                            FontWeight="Bold" MinWidth="30"/>
+                    <TextBlock x:Name="ZoomIndicator" Text="100%"
+                               VerticalAlignment="Center" FontSize="12" MinWidth="40"
+                               TextAlignment="Center"/>
+                    <Button Content="+" Click="ZoomIn_Click" Padding="8,4"
+                            FontWeight="Bold" MinWidth="30"/>
+                    <Button Content="Fit" Click="FitWidth_Click" Padding="8,4"/>
+                    <Button Content="Open" Click="OpenExternal_Click" Padding="8,4"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- PDF page display -->
+        <Grid>
+            <ScrollViewer x:Name="PageScrollViewer"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+                <Image x:Name="PageImage"
+                       Stretch="None"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       Margin="10"/>
+            </ScrollViewer>
+
+            <!-- No PDF loaded overlay -->
+            <Border x:Name="NoPdfOverlay"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    IsVisible="True">
+                <TextBlock Text="No PDF loaded"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="16" Foreground="Gray"/>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ResearchHub.App.ViewModels"
+             xmlns:models="using:ResearchHub.Core.Models"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -95,6 +96,41 @@
                         <Button Content="Delete Reference"
                                 Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).DeleteReferenceCommand}"
                                 HorizontalAlignment="Left"/>
+
+                        <Separator Margin="0,10"/>
+
+                        <!-- PDF Attachments Section -->
+                        <TextBlock Text="PDF Attachments" FontWeight="Bold"/>
+                        <Button Content="Attach PDF" Click="AttachPdfButton_Click"
+                                HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
+
+                        <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).PdfAttachments}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:ReferencePdf">
+                                    <Border Padding="6,4" Margin="0,2"
+                                            Background="{DynamicResource SystemControlBackgroundChromeLowBrush}"
+                                            CornerRadius="4">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding OriginalFileName}"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Button Grid.Column="1" Content="Open"
+                                                    Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).OpenPdfCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="6,2" Margin="4,0" FontSize="12"/>
+                                            <Button Grid.Column="2" Content="Remove"
+                                                    Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).RemovePdfCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="6,2" FontSize="12"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="No PDFs attached" FontSize="12" Foreground="Gray"
+                                   IsVisible="{Binding !$parent[UserControl].((vm:LibraryViewModel)DataContext).HasPdfAttachments}"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

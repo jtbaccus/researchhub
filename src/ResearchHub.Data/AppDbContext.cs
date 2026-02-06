@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
 {
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Reference> References => Set<Reference>();
+    public DbSet<ReferencePdf> ReferencePdfs => Set<ReferencePdf>();
     public DbSet<ScreeningDecision> ScreeningDecisions => Set<ScreeningDecision>();
     public DbSet<ExtractionSchema> ExtractionSchemas => Set<ExtractionSchema>();
     public DbSet<ExtractionRow> ExtractionRows => Set<ExtractionRow>();
@@ -84,10 +85,26 @@ public class AppDbContext : DbContext
                   .HasForeignKey(r => r.ReferenceId)
                   .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasMany(e => e.PdfAttachments)
+                  .WithOne(p => p.Reference)
+                  .HasForeignKey(p => p.ReferenceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
             // Indexes
             entity.HasIndex(e => e.Doi);
             entity.HasIndex(e => e.Pmid);
             entity.HasIndex(e => e.Year);
+        });
+
+        // ReferencePdf
+        modelBuilder.Entity<ReferencePdf>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.StoredPath).IsRequired();
+            entity.Property(e => e.FileSizeBytes).IsRequired();
+
+            entity.HasIndex(e => e.ReferenceId);
+            entity.HasIndex(e => new { e.ReferenceId, e.StoredPath }).IsUnique();
         });
 
         // ScreeningDecision

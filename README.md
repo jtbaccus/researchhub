@@ -36,6 +36,7 @@ researchhub/
 ### Reference Library
 - Import from RIS, BibTeX, CSV (Elicit export compatible)
 - View/edit reference metadata (title, authors, abstract, DOI, PMID)
+- Attach PDFs (stored locally)
 - Tagging and organization
 - Export to RIS/BibTeX
 
@@ -54,6 +55,7 @@ See `docs/parsers.md` for supported edge cases and behaviors.
 - **Keyboard shortcuts:** I=Include, E=Exclude, M=Maybe
 - Exclusion reason tracking
 - Progress statistics dashboard
+- Local LLM screening assistance backend (Ollama; UI pending)
 
 ### Data Extraction
 - Define custom extraction schemas
@@ -88,11 +90,11 @@ SQLite database stored at:
 
 ## Future Enhancements
 
-- PDF attachment and viewer integration
+- PDF viewer integration
 - Watch folder sync for automatic import
 - PRISMA flow diagram generation
 - Deduplication algorithm
-- Local LLM for screening assistance
+- Local LLM screening UI and configuration
 - Elicit API integration (when available)
 
 ---

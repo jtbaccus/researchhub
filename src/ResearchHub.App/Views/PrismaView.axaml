@@ -1,0 +1,201 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ResearchHub.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="ResearchHub.App.Views.PrismaView"
+             x:DataType="vm:PrismaViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Row 0: Toolbar -->
+        <Border Grid.Row="0" Padding="15" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="PRISMA 2020 Flow Diagram"
+                           FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="15,8"/>
+                    <Button Content="Export SVG" Click="ExportSvgButton_Click" Padding="15,8"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Row 1: Diagram content -->
+        <!-- Loading overlay -->
+        <Border Grid.Row="1" Background="#80000000" IsVisible="{Binding IsLoading}" ZIndex="10">
+            <TextBlock Text="Loading..." FontSize="18" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Empty state -->
+        <TextBlock Grid.Row="1" Text="No project data available. Open a project to view the PRISMA flow diagram."
+                   FontSize="14" Foreground="Gray" TextWrapping="Wrap"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding !HasCounts}"/>
+
+        <!-- PRISMA Diagram -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      IsVisible="{Binding HasCounts}">
+            <Grid Margin="20" HorizontalAlignment="Center" VerticalAlignment="Top"
+                  ColumnDefinitions="100,280,60,240"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+
+                <!-- ===== IDENTIFICATION PHASE ===== -->
+
+                <!-- Phase label: spans rows 0-4 (Records identified + arrow + Records after duplicates) -->
+                <Border Grid.Row="0" Grid.RowSpan="5" Grid.Column="0"
+                        Background="#154A90D9" BorderBrush="#4A90D9" BorderThickness="1.5"
+                        CornerRadius="4" Margin="0,0,8,0" Padding="4">
+                    <TextBlock Text="Identification" FontWeight="Bold" FontSize="13" Foreground="#4A90D9"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform Angle="-90"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Border>
+
+                <!-- Row 0: Records identified -->
+                <Border Grid.Row="0" Grid.Column="1" BorderBrush="#4A90D9" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding IdentificationRecordsText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 0: Arrow right to Duplicates removed -->
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="&#x25B6;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#555"/>
+
+                <!-- Row 0: Duplicates removed (side box) -->
+                <Border Grid.Row="0" Grid.Column="3" BorderBrush="#D9534F" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding DuplicatesRemovedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 1: Down arrow -->
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="&#x25BC;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4"
+                           Foreground="#555"/>
+
+                <!-- Row 2: Records after duplicates -->
+                <Border Grid.Row="2" Grid.Column="1" BorderBrush="#4A90D9" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding RecordsAfterDuplicatesText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 3: Down arrow -->
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="&#x25BC;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4"
+                           Foreground="#555"/>
+
+                <!-- Spacer row for phase boundary -->
+                <Border Grid.Row="4" Grid.Column="1" Height="4"/>
+
+                <!-- ===== SCREENING PHASE ===== -->
+
+                <!-- Phase label -->
+                <Border Grid.Row="5" Grid.RowSpan="3" Grid.Column="0"
+                        Background="#155CB85C" BorderBrush="#5CB85C" BorderThickness="1.5"
+                        CornerRadius="4" Margin="0,0,8,0" Padding="4">
+                    <TextBlock Text="Screening" FontWeight="Bold" FontSize="13" Foreground="#5CB85C"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform Angle="-90"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Border>
+
+                <!-- Row 5: Records screened (with spacer at top for phase gap) -->
+                <Border Grid.Row="5" Grid.Column="1" BorderBrush="#5CB85C" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding RecordsScreenedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 5: Arrow right to Records excluded -->
+                <TextBlock Grid.Row="5" Grid.Column="2" Text="&#x25B6;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#555"/>
+
+                <!-- Row 5: Records excluded (side box) -->
+                <Border Grid.Row="5" Grid.Column="3" BorderBrush="#D9534F" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding RecordsExcludedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 6: Down arrow -->
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="&#x25BC;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4"
+                           Foreground="#555"/>
+
+                <!-- Row 7: Spacer for phase boundary -->
+                <Border Grid.Row="7" Grid.Column="1" Height="4"/>
+
+                <!-- ===== ELIGIBILITY PHASE ===== -->
+
+                <!-- Phase label -->
+                <Border Grid.Row="8" Grid.RowSpan="3" Grid.Column="0"
+                        Background="#15F0AD4E" BorderBrush="#F0AD4E" BorderThickness="1.5"
+                        CornerRadius="4" Margin="0,0,8,0" Padding="4">
+                    <TextBlock Text="Eligibility" FontWeight="Bold" FontSize="13" Foreground="#F0AD4E"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform Angle="-90"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Border>
+
+                <!-- Row 8: Full-text assessed -->
+                <Border Grid.Row="8" Grid.Column="1" BorderBrush="#F0AD4E" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding FullTextAssessedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 8: Arrow right to Full-text excluded -->
+                <TextBlock Grid.Row="8" Grid.Column="2" Text="&#x25B6;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#555"/>
+
+                <!-- Row 8: Full-text excluded (side box) -->
+                <Border Grid.Row="8" Grid.Column="3" BorderBrush="#D9534F" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding FullTextExcludedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Row 9: Down arrow -->
+                <TextBlock Grid.Row="9" Grid.Column="1" Text="&#x25BC;" FontSize="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4"
+                           Foreground="#555"/>
+
+                <!-- Row 10: Spacer for phase boundary -->
+                <Border Grid.Row="10" Grid.Column="1" Height="4"/>
+
+                <!-- ===== INCLUDED PHASE ===== -->
+
+                <!-- Phase label -->
+                <Border Grid.Row="11" Grid.RowSpan="2" Grid.Column="0"
+                        Background="#159B59B6" BorderBrush="#9B59B6" BorderThickness="1.5"
+                        CornerRadius="4" Margin="0,0,8,0" Padding="4">
+                    <TextBlock Text="Included" FontWeight="Bold" FontSize="13" Foreground="#9B59B6"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform Angle="-90"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Border>
+
+                <!-- Row 11: Studies included -->
+                <Border Grid.Row="11" Grid.Column="1" BorderBrush="#9B59B6" BorderThickness="2"
+                        CornerRadius="6" Padding="12" MinHeight="65" Background="White">
+                    <TextBlock Text="{Binding StudiesIncludedText}" TextWrapping="Wrap"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

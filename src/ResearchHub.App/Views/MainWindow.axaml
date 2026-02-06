@@ -33,6 +33,8 @@
                             IsEnabled="{Binding HasProject}" Classes="nav" />
                     <Button Content="Extraction" Command="{Binding NavigateToExtractionCommand}"
                             IsEnabled="{Binding HasProject}" Classes="nav" />
+                    <Button Content="PRISMA" Command="{Binding NavigateToPrismaCommand}"
+                            IsEnabled="{Binding HasProject}" Classes="nav" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
@@ -57,6 +59,9 @@
                 </DataTemplate>
                 <DataTemplate DataType="vm:ExtractionViewModel">
                     <views:ExtractionView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:PrismaViewModel">
+                    <views:PrismaView />
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
