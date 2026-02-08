@@ -13,7 +13,7 @@
         <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <Button Content="Import" Command="{Binding ImportFileCommand}" Padding="15,8"/>
+                    <Button Content="Import" x:Name="ImportButton" Padding="15,8"/>
                     <Button Content="Export RIS" Command="{Binding ExportReferencesCommand}"
                             CommandParameter="ris" Padding="15,8"/>
                     <Button Content="Export BibTeX" Command="{Binding ExportReferencesCommand}"
@@ -46,21 +46,26 @@
         <!-- Main Content: Reference List + Detail View -->
         <Grid Grid.Row="2" ColumnDefinitions="*,350">
             <!-- Reference List -->
-            <DataGrid Grid.Column="0" ItemsSource="{Binding FilteredReferences}"
-                      SelectedItem="{Binding SelectedReference}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      GridLinesVisibility="Horizontal"
-                      CanUserReorderColumns="True"
-                      CanUserResizeColumns="True"
-                      CanUserSortColumns="True">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="60"/>
-                    <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
-                    <DataGridTextColumn Header="Authors" Binding="{Binding Authors[0]}" Width="150"/>
-                    <DataGridTextColumn Header="Journal" Binding="{Binding Journal}" Width="150"/>
-                </DataGrid.Columns>
-            </DataGrid>
+            <ListBox Grid.Column="0" ItemsSource="{Binding FilteredReferences}"
+                     SelectedItem="{Binding SelectedReference}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:Reference">
+                        <Grid ColumnDefinitions="55,*,150" Margin="4,6">
+                            <TextBlock Grid.Column="0" Text="{Binding Year}" FontSize="12"
+                                       Foreground="Gray" VerticalAlignment="Top"/>
+                            <StackPanel Grid.Column="1" Margin="8,0">
+                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxLines="2"
+                                           TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Journal}" FontSize="11" Foreground="Gray"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Authors[0]}" FontSize="12"
+                                       Foreground="Gray" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
             <!-- Detail View -->
             <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
@@ -101,7 +106,7 @@
 
                         <!-- PDF Attachments Section -->
                         <TextBlock Text="PDF Attachments" FontWeight="Bold"/>
-                        <Button Content="Attach PDF" Click="AttachPdfButton_Click"
+                        <Button Content="Attach PDF" x:Name="AttachPdfButton"
                                 HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
 
                         <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).PdfAttachments}">

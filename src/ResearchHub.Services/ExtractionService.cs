@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using CsvHelper;
 using ResearchHub.Core.Models;
 using ResearchHub.Data.Repositories;
@@ -143,6 +144,10 @@ public class ExtractionService : IExtractionService
         // Write header
         csv.WriteField("ReferenceId");
         csv.WriteField("Title");
+        csv.WriteField("Authors");
+        csv.WriteField("Journal");
+        csv.WriteField("Year");
+        csv.WriteField("DOI");
         foreach (var column in schema.Columns)
         {
             csv.WriteField(column.Name);
@@ -156,6 +161,10 @@ public class ExtractionService : IExtractionService
 
             csv.WriteField(row.ReferenceId);
             csv.WriteField(reference?.Title ?? "");
+            csv.WriteField(reference != null ? string.Join("; ", reference.Authors) : "");
+            csv.WriteField(reference?.Journal ?? "");
+            csv.WriteField(reference?.Year?.ToString() ?? "");
+            csv.WriteField(reference?.Doi ?? "");
 
             foreach (var column in schema.Columns)
             {
@@ -164,5 +173,53 @@ public class ExtractionService : IExtractionService
             }
             csv.NextRecord();
         }
+    }
+
+    public async Task ExportToExcelAsync(int schemaId, string filePath)
+    {
+        var schema = await GetSchemaAsync(schemaId);
+        if (schema == null)
+            throw new ArgumentException("Schema not found");
+
+        var rows = await GetExtractionsForSchemaAsync(schemaId);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Extraction Data");
+
+        // Write header row
+        var headers = new List<string> { "ReferenceId", "Title", "Authors", "Journal", "Year", "DOI" };
+        headers.AddRange(schema.Columns.Select(c => c.Name));
+
+        for (int i = 0; i < headers.Count; i++)
+        {
+            var cell = worksheet.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+        }
+
+        // Write data rows
+        int rowNum = 2;
+        foreach (var row in rows)
+        {
+            var reference = await _referenceRepository.GetByIdAsync(row.ReferenceId);
+
+            worksheet.Cell(rowNum, 1).Value = row.ReferenceId;
+            worksheet.Cell(rowNum, 2).Value = reference?.Title ?? "";
+            worksheet.Cell(rowNum, 3).Value = reference != null ? string.Join("; ", reference.Authors) : "";
+            worksheet.Cell(rowNum, 4).Value = reference?.Journal ?? "";
+            worksheet.Cell(rowNum, 5).Value = reference?.Year?.ToString() ?? "";
+            worksheet.Cell(rowNum, 6).Value = reference?.Doi ?? "";
+
+            for (int i = 0; i < schema.Columns.Count; i++)
+            {
+                row.Values.TryGetValue(schema.Columns[i].Name, out var value);
+                worksheet.Cell(rowNum, 7 + i).Value = value ?? "";
+            }
+
+            rowNum++;
+        }
+
+        worksheet.Columns().AdjustToContents();
+        workbook.SaveAs(filePath);
     }
 }

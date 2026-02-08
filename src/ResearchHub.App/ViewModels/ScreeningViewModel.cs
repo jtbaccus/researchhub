@@ -3,10 +3,12 @@ using CommunityToolkit.Mvvm.Input;
 using ResearchHub.Core.Models;
 using ResearchHub.Data.Repositories;
 using ResearchHub.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ResearchHub.App.ViewModels;
@@ -42,6 +44,9 @@ public partial class ScreeningViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    private bool _isScreeningComplete;
+
     // PDF panel properties
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsScreeningWithPdf))]
@@ -56,6 +61,40 @@ public partial class ScreeningViewModel : ViewModelBase
 
     public bool IsScreeningWithPdf => IsScreeningMode && IsPdfPanelVisible;
     public bool IsScreeningWithoutPdf => IsScreeningMode && !IsPdfPanelVisible;
+
+    // LLM suggestion properties
+    [ObservableProperty]
+    private bool _isLlmAutoSuggestEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLlmSection))]
+    private bool _isLlmSuggestionLoading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLlmSuggestion))]
+    [NotifyPropertyChangedFor(nameof(ShowLlmSection))]
+    private string? _llmVerdictText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LlmConfidenceText))]
+    private double? _llmConfidence;
+
+    [ObservableProperty]
+    private string? _llmReason;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLlmError))]
+    [NotifyPropertyChangedFor(nameof(ShowLlmSection))]
+    private string? _llmErrorMessage;
+
+    public bool HasLlmSuggestion => LlmVerdictText != null;
+    public bool HasLlmError => LlmErrorMessage != null;
+    public bool ShowLlmSection => IsLlmSuggestionLoading || HasLlmSuggestion || HasLlmError;
+    public string? LlmConfidenceText => LlmConfidence.HasValue
+        ? $"{LlmConfidence.Value:P0}"
+        : null;
+
+    private CancellationTokenSource? _llmCts;
 
     // Duplicate review mode properties
     [ObservableProperty]
@@ -188,13 +227,24 @@ public partial class ScreeningViewModel : ViewModelBase
     {
         if (App.ScreeningService == null || _mainViewModel.CurrentProject == null) return;
 
+        ClearLlmSuggestion();
+
         CurrentReference = await App.ScreeningService.GetNextForScreeningAsync(_mainViewModel.CurrentProject.Id, CurrentPhase);
         ExclusionReason = null;
         await LoadPdfForCurrentReferenceAsync();
 
         if (CurrentReference == null)
         {
+            IsScreeningComplete = true;
             _mainViewModel.StatusMessage = "Screening complete! No more references to screen.";
+        }
+        else
+        {
+            IsScreeningComplete = false;
+            if (IsLlmAutoSuggestEnabled)
+            {
+                _ = RequestLlmSuggestionAsync();
+            }
         }
     }
 
@@ -293,6 +343,86 @@ public partial class ScreeningViewModel : ViewModelBase
             CurrentPdfPath = null;
             HasPdf = false;
         }
+    }
+
+    // LLM suggestion commands
+
+    [RelayCommand]
+    private async Task RequestLlmSuggestion()
+    {
+        await RequestLlmSuggestionAsync();
+    }
+
+    [RelayCommand]
+    private void ToggleLlmAutoSuggest()
+    {
+        IsLlmAutoSuggestEnabled = !IsLlmAutoSuggestEnabled;
+        if (IsLlmAutoSuggestEnabled && CurrentReference != null)
+        {
+            _ = RequestLlmSuggestionAsync();
+        }
+    }
+
+    private async Task RequestLlmSuggestionAsync()
+    {
+        if (CurrentReference == null || App.LlmScreeningService == null) return;
+
+        _llmCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _llmCts = cts;
+
+        ClearLlmSuggestion(cancelInFlight: false);
+        IsLlmSuggestionLoading = true;
+
+        try
+        {
+            var result = await App.LlmScreeningService.SuggestAsync(
+                CurrentReference, CurrentPhase, cancellationToken: cts.Token);
+
+            if (cts.Token.IsCancellationRequested) return;
+
+            if (result.IsSuccess && result.Suggestion != null)
+            {
+                LlmVerdictText = result.Suggestion.Verdict.ToString();
+                LlmConfidence = result.Suggestion.Confidence;
+                LlmReason = result.Suggestion.Reason;
+            }
+            else
+            {
+                LlmErrorMessage = result.ErrorMessage ?? "Unknown error from LLM.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Request was cancelled (e.g. user advanced to next reference)
+        }
+        catch (Exception ex)
+        {
+            if (!cts.Token.IsCancellationRequested)
+            {
+                LlmErrorMessage = $"Unexpected error: {ex.Message}";
+            }
+        }
+        finally
+        {
+            if (!cts.Token.IsCancellationRequested)
+            {
+                IsLlmSuggestionLoading = false;
+            }
+        }
+    }
+
+    private void ClearLlmSuggestion(bool cancelInFlight = true)
+    {
+        if (cancelInFlight)
+        {
+            _llmCts?.Cancel();
+        }
+        IsLlmSuggestionLoading = false;
+        LlmVerdictText = null;
+        LlmConfidence = null;
+        LlmReason = null;
+        LlmErrorMessage = null;
     }
 
     // Duplicate review commands
@@ -400,5 +530,11 @@ public partial class ScreeningViewModel : ViewModelBase
             CurrentDuplicatePair = null;
             _mainViewModel.StatusMessage = $"Duplicate review complete! {DuplicatesResolvedCount} excluded, {DuplicatesSkippedCount} skipped.";
         }
+    }
+
+    [RelayCommand]
+    private void NavigateToExtraction()
+    {
+        _mainViewModel.NavigateToExtraction();
     }
 }

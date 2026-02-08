@@ -13,6 +13,8 @@ public partial class LibraryView : UserControl
     public LibraryView()
     {
         InitializeComponent();
+        ImportButton.Click += ImportButton_Click;
+        AttachPdfButton.Click += AttachPdfButton_Click;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)

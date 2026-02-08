@@ -25,16 +25,36 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal"
                             HorizontalAlignment="Center" Spacing="5">
-                    <Button Content="Dashboard" Command="{Binding NavigateToDashboardCommand}"
-                            Classes="nav" />
-                    <Button Content="Library" Command="{Binding NavigateToLibraryCommand}"
-                            IsEnabled="{Binding HasProject}" Classes="nav" />
-                    <Button Content="Screening" Command="{Binding NavigateToScreeningCommand}"
-                            IsEnabled="{Binding HasProject}" Classes="nav" />
-                    <Button Content="Extraction" Command="{Binding NavigateToExtractionCommand}"
-                            IsEnabled="{Binding HasProject}" Classes="nav" />
-                    <Button Content="PRISMA" Command="{Binding NavigateToPrismaCommand}"
-                            IsEnabled="{Binding HasProject}" Classes="nav" />
+                    <StackPanel>
+                        <Button Content="Dashboard" Command="{Binding NavigateToDashboardCommand}"
+                                Classes="nav" />
+                        <Border Height="3" Background="White" CornerRadius="1.5"
+                                IsVisible="{Binding IsDashboardActive}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="Library" Command="{Binding NavigateToLibraryCommand}"
+                                IsEnabled="{Binding HasProject}" Classes="nav" />
+                        <Border Height="3" Background="White" CornerRadius="1.5"
+                                IsVisible="{Binding IsLibraryActive}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="Screening" Command="{Binding NavigateToScreeningCommand}"
+                                IsEnabled="{Binding HasProject}" Classes="nav" />
+                        <Border Height="3" Background="White" CornerRadius="1.5"
+                                IsVisible="{Binding IsScreeningActive}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="Extraction" Command="{Binding NavigateToExtractionCommand}"
+                                IsEnabled="{Binding HasProject}" Classes="nav" />
+                        <Border Height="3" Background="White" CornerRadius="1.5"
+                                IsVisible="{Binding IsExtractionActive}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="PRISMA" Command="{Binding NavigateToPrismaCommand}"
+                                IsEnabled="{Binding HasProject}" Classes="nav" />
+                        <Border Height="3" Background="White" CornerRadius="1.5"
+                                IsVisible="{Binding IsPrismaActive}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">

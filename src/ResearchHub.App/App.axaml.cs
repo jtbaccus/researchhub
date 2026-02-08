@@ -129,7 +129,7 @@ public partial class App : Application
             "FileSizeBytes INTEGER NOT NULL, " +
             "Sha256 TEXT NULL, " +
             "AddedAt TEXT NOT NULL, " +
-            "FOREIGN KEY(ReferenceId) REFERENCES References(Id) ON DELETE CASCADE" +
+            "FOREIGN KEY(ReferenceId) REFERENCES \"References\"(Id) ON DELETE CASCADE" +
             ")");
 
         dbContext.Database.ExecuteSqlRaw(

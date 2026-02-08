@@ -20,6 +20,20 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasProject;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDashboardActive))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryActive))]
+    [NotifyPropertyChangedFor(nameof(IsScreeningActive))]
+    [NotifyPropertyChangedFor(nameof(IsExtractionActive))]
+    [NotifyPropertyChangedFor(nameof(IsPrismaActive))]
+    private string _activeNavSection = "Dashboard";
+
+    public bool IsDashboardActive => ActiveNavSection == "Dashboard";
+    public bool IsLibraryActive => ActiveNavSection == "Library";
+    public bool IsScreeningActive => ActiveNavSection == "Screening";
+    public bool IsExtractionActive => ActiveNavSection == "Extraction";
+    public bool IsPrismaActive => ActiveNavSection == "PRISMA";
+
     public ObservableCollection<Project> RecentProjects { get; } = new();
 
     private DashboardViewModel? _dashboardViewModel;
@@ -79,6 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _dashboardViewModel ??= new DashboardViewModel(this);
         CurrentView = _dashboardViewModel;
+        ActiveNavSection = "Dashboard";
     }
 
     [RelayCommand]
@@ -87,6 +102,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!HasProject) return;
         _libraryViewModel = new LibraryViewModel(this);
         CurrentView = _libraryViewModel;
+        ActiveNavSection = "Library";
     }
 
     [RelayCommand]
@@ -95,14 +111,16 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!HasProject) return;
         _screeningViewModel = new ScreeningViewModel(this);
         CurrentView = _screeningViewModel;
+        ActiveNavSection = "Screening";
     }
 
     [RelayCommand]
-    private void NavigateToExtraction()
+    public void NavigateToExtraction()
     {
         if (!HasProject) return;
         _extractionViewModel = new ExtractionViewModel(this);
         CurrentView = _extractionViewModel;
+        ActiveNavSection = "Extraction";
     }
 
     [RelayCommand]
@@ -111,5 +129,6 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!HasProject) return;
         _prismaViewModel = new PrismaViewModel(this);
         CurrentView = _prismaViewModel;
+        ActiveNavSection = "PRISMA";
     }
 }

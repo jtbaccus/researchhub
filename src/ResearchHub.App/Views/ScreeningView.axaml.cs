@@ -48,6 +48,11 @@ public partial class ScreeningView : UserControl
                     vm.TogglePdfPanelCommand.Execute(null);
                 e.Handled = true;
                 break;
+            case Key.A:
+                if (vm.RequestLlmSuggestionCommand.CanExecute(null))
+                    vm.RequestLlmSuggestionCommand.Execute(null);
+                e.Handled = true;
+                break;
         }
     }
 

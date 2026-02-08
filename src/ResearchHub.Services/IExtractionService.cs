@@ -16,4 +16,5 @@ public interface IExtractionService
 
     Task<int> ImportFromCsvAsync(int schemaId, string filePath, string referenceIdColumn);
     Task ExportToCsvAsync(int schemaId, string filePath);
+    Task ExportToExcelAsync(int schemaId, string filePath);
 }

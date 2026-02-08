@@ -1,108 +1,437 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ResearchHub.App.ViewModels"
+             xmlns:controls="using:ResearchHub.App.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="750"
              x:Class="ResearchHub.App.Views.ExtractionView"
              x:DataType="vm:ExtractionViewModel">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Toolbar -->
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Row 0: Toolbar -->
         <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{Binding Schemas}"
                               SelectedItem="{Binding SelectedSchema}"
                               DisplayMemberBinding="{Binding Name}"
                               PlaceholderText="Select extraction schema"
                               Width="250"/>
-                    <Button Content="Create Schema" Command="{Binding CreateSchemaCommand}" Padding="15,8"/>
+                    <Button Content="New Schema" Command="{Binding OpenSchemaEditorCommand}" Padding="12,8"/>
+                    <Button Content="Edit Schema" Command="{Binding EditCurrentSchemaCommand}"
+                            IsEnabled="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Padding="12,8"/>
+                    <Button Content="Delete Schema" Command="{Binding DeleteSchemaCommand}"
+                            IsEnabled="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Padding="12,8"/>
                 </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                    <Button Content="Save" Command="{Binding SaveExtractionCommand}" Padding="15,8"/>
-                    <Button Content="Export CSV" Command="{Binding ExportDataCommand}" Padding="15,8"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <ToggleButton Content="PDF (P)"
+                                  IsChecked="{Binding IsPdfPanelVisible}"
+                                  Padding="12,8"/>
+                    <Button Content="Save (Ctrl+S)" Command="{Binding SaveExtractionCommand}" Padding="12,8"/>
+                    <Button Content="Export Data (Ctrl+E)" x:Name="ExportButton" Padding="12,8"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Main Content -->
-        <Grid Grid.Row="1" ColumnDefinitions="300,*">
-            <!-- Reference List -->
-            <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                    Padding="10">
-                <Grid RowDefinitions="Auto,*">
-                    <TextBlock Grid.Row="0" Text="Included References" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding IncludedReferences}"
-                             SelectedItem="{Binding SelectedReference}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="5">
-                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Year, StringFormat='({0})'}"
-                                               FontSize="11" Foreground="Gray"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Border>
+        <!-- Row 1: Progress bar (visible when schema selected and not editing) -->
+        <Border Grid.Row="1" Padding="10,6"
+                IsVisible="{Binding IsFormMode}"
+                Background="{DynamicResource SystemControlBackgroundChromeLowBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <ProgressBar Grid.Column="0" Value="{Binding ExtractionProgressPercentage}"
+                             Minimum="0" Maximum="100" Height="8" Margin="0,0,15,0"/>
+                <TextBlock Grid.Column="1" Text="{Binding ExtractionProgressText}"
+                           VerticalAlignment="Center" FontSize="12" Foreground="Gray"/>
+            </Grid>
+        </Border>
 
-            <!-- Extraction Form -->
-            <Border Grid.Column="1" Padding="20">
-                <Grid>
-                    <!-- Schema Selected: Show Form -->
-                    <ScrollViewer IsVisible="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNotNull}}">
-                        <StackPanel Spacing="15">
-                            <!-- Selected Reference Info -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                    CornerRadius="8" Padding="15"
-                                    IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <StackPanel DataContext="{Binding SelectedReference}">
-                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding Authors[0]}" FontStyle="Italic" Margin="0,5,0,0"/>
-                                </StackPanel>
-                            </Border>
+        <!-- Row 2: Content area — overlapping panels -->
+        <Grid Grid.Row="2">
 
-                            <!-- Extraction Fields -->
-                            <TextBlock Text="Data Extraction Form" FontSize="18" FontWeight="Bold" Margin="0,10,0,0"/>
+            <!-- Panel 1: Empty state (no schema selected, not editing) -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                        IsVisible="{Binding !IsFormMode}">
+                <StackPanel IsVisible="{Binding !IsSchemaEditorMode}">
+                    <TextBlock Text="No Extraction Schema Selected" FontSize="20" FontWeight="Bold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Select an existing schema or create a new one to begin data extraction."
+                               FontSize="14" Foreground="Gray" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    <Button Content="Create New Schema"
+                            Command="{Binding OpenSchemaEditorCommand}"
+                            HorizontalAlignment="Center" Margin="0,25,0,0" Padding="25,12"/>
+                </StackPanel>
+            </StackPanel>
 
-                            <ItemsControl ItemsSource="{Binding SelectedSchema.Columns}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Margin="0,10">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray"
-                                                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                            <TextBox Margin="0,5,0,0" TextWrapping="Wrap" AcceptsReturn="True"
-                                                     MinHeight="30"/>
+            <!-- Panel 2a: Extraction Form Mode WITHOUT PDF -->
+            <Grid ColumnDefinitions="300,*" IsVisible="{Binding IsFormWithoutPdf}">
+
+                <!-- Left: Reference list + navigation -->
+                <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" Padding="10">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Row="0" Text="Included References" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding ReferenceItems}"
+                                 SelectedItem="{Binding SelectedReferenceItem}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExtractionReferenceItem">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="4">
+                                        <TextBlock Grid.Column="0" Text="&#x2713;" Foreground="Green"
+                                                   FontWeight="Bold" FontSize="14"
+                                                   VerticalAlignment="Top" Margin="0,0,6,0"
+                                                   IsVisible="{Binding IsExtracted}"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Reference.Title}" TextTrimming="CharacterEllipsis" MaxLines="2"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Reference.Year, StringFormat='({0})'}"
+                                                       FontSize="11" Foreground="Gray"/>
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0"
+                                    HorizontalAlignment="Center">
+                            <Button Content="&#x2190; Prev" Command="{Binding PreviousReferenceCommand}" Padding="15,6"/>
+                            <Button Content="Next &#x2192;" Command="{Binding NextReferenceCommand}" Padding="15,6"/>
                         </StackPanel>
-                    </ScrollViewer>
+                    </Grid>
+                </Border>
 
-                    <!-- No Schema Selected -->
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                                IsVisible="{Binding SelectedSchema, Converter={x:Static ObjectConverters.IsNull}}">
-                        <TextBlock Text="No Extraction Schema Selected" FontSize="18" FontWeight="Bold"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="Select or create an extraction schema to begin data extraction."
-                                   FontSize="14" Foreground="Gray" HorizontalAlignment="Center"
-                                   Margin="0,10,0,0"/>
-                        <Button Content="Create New Schema"
-                                Command="{Binding CreateSchemaCommand}"
-                                HorizontalAlignment="Center" Margin="0,20,0,0"
-                                Padding="20,10"/>
+                <!-- Right: Extraction form -->
+                <Border Grid.Column="1" Padding="20">
+                    <Grid>
+                        <!-- No reference selected -->
+                        <TextBlock Text="Select a reference from the list to begin extraction."
+                                   FontSize="14" Foreground="Gray"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   IsVisible="{Binding !HasCurrentRow}"/>
+
+                        <!-- Form with data -->
+                        <ScrollViewer IsVisible="{Binding HasCurrentRow}">
+                            <StackPanel Spacing="12" x:CompileBindings="False">
+                                <!-- Reference info header -->
+                                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        CornerRadius="8" Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SelectedReference.Title}" FontWeight="Bold"
+                                                   TextWrapping="Wrap" FontSize="14"/>
+                                        <TextBlock Text="{Binding SelectedReference.Authors[0]}" FontStyle="Italic"
+                                                   Margin="0,4,0,0" FontSize="12"/>
+                                        <TextBlock FontSize="11" Foreground="Gray" Margin="0,2,0,0">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} ({1})">
+                                                    <Binding Path="SelectedReference.Journal"/>
+                                                    <Binding Path="SelectedReference.Year"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="Data Extraction Form" FontSize="16" FontWeight="Bold" Margin="0,8,0,0"/>
+
+                                <!-- Dynamic form fields -->
+                                <ItemsControl ItemsSource="{Binding CurrentRowViewModel.ColumnValues}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,6" Padding="0,0,0,6"
+                                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                                    BorderThickness="0,0,0,1">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="{Binding Column.Name}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="*" Foreground="Red"
+                                                                   IsVisible="{Binding Column.IsRequired}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Column.Description}" FontSize="11"
+                                                               Foreground="Gray" Margin="0,2,0,4"
+                                                               IsVisible="{Binding Column.Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                                    <!-- Text -->
+                                                    <TextBox IsVisible="{Binding IsText}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             TextWrapping="Wrap" AcceptsReturn="True"
+                                                             MinHeight="60" Watermark="Enter text..."/>
+
+                                                    <!-- Number -->
+                                                    <TextBox IsVisible="{Binding IsNumber}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             Watermark="Enter number..." Width="200"
+                                                             HorizontalAlignment="Left"/>
+
+                                                    <!-- Boolean -->
+                                                    <CheckBox IsVisible="{Binding IsBoolean}"
+                                                              IsChecked="{Binding BooleanValue, Mode=TwoWay}"
+                                                              Content="Yes" Margin="0,4,0,0"/>
+
+                                                    <!-- Date -->
+                                                    <TextBox IsVisible="{Binding IsDate}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             Watermark="YYYY-MM-DD" Width="200"
+                                                             HorizontalAlignment="Left"/>
+
+                                                    <!-- Dropdown -->
+                                                    <ComboBox IsVisible="{Binding IsDropdown}"
+                                                              ItemsSource="{Binding Options}"
+                                                              SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                              PlaceholderText="Select..." Width="300"
+                                                              HorizontalAlignment="Left"/>
+
+                                                    <!-- MultiSelect -->
+                                                    <ItemsControl IsVisible="{Binding IsMultiSelect}"
+                                                                  ItemsSource="{Binding MultiSelectOptions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox Content="{Binding Label}"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                          Margin="0,2,15,2"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Panel 2b: Extraction Form Mode WITH PDF -->
+            <Grid ColumnDefinitions="250,5,*,5,2*" IsVisible="{Binding IsFormWithPdf}">
+
+                <!-- Left: Reference list + navigation -->
+                <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" Padding="10">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Row="0" Text="Included References" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding ReferenceItems}"
+                                 SelectedItem="{Binding SelectedReferenceItem}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExtractionReferenceItem">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="4">
+                                        <TextBlock Grid.Column="0" Text="&#x2713;" Foreground="Green"
+                                                   FontWeight="Bold" FontSize="14"
+                                                   VerticalAlignment="Top" Margin="0,0,6,0"
+                                                   IsVisible="{Binding IsExtracted}"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Reference.Title}" TextTrimming="CharacterEllipsis" MaxLines="2"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Reference.Year, StringFormat='({0})'}"
+                                                       FontSize="11" Foreground="Gray"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0"
+                                    HorizontalAlignment="Center">
+                            <Button Content="&#x2190;" Command="{Binding PreviousReferenceCommand}" Padding="10,6"/>
+                            <Button Content="&#x2192;" Command="{Binding NextReferenceCommand}" Padding="10,6"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Column="1" Background="Gray" ResizeDirection="Columns"/>
+
+                <!-- Center: Extraction form (compact) -->
+                <Border Grid.Column="2" Padding="15">
+                    <Grid>
+                        <TextBlock Text="Select a reference to begin extraction."
+                                   FontSize="14" Foreground="Gray"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   IsVisible="{Binding !HasCurrentRow}"/>
+
+                        <ScrollViewer IsVisible="{Binding HasCurrentRow}">
+                            <StackPanel Spacing="10" x:CompileBindings="False">
+                                <!-- Reference info header -->
+                                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        CornerRadius="8" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SelectedReference.Title}" FontWeight="Bold"
+                                                   TextWrapping="Wrap" FontSize="13"/>
+                                        <TextBlock FontSize="11" Foreground="Gray" Margin="0,2,0,0">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} ({1})">
+                                                    <Binding Path="SelectedReference.Journal"/>
+                                                    <Binding Path="SelectedReference.Year"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="Data Extraction Form" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+
+                                <!-- Dynamic form fields -->
+                                <ItemsControl ItemsSource="{Binding CurrentRowViewModel.ColumnValues}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,4" Padding="0,0,0,4"
+                                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                                    BorderThickness="0,0,0,1">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="{Binding Column.Name}" FontWeight="SemiBold" FontSize="13"/>
+                                                        <TextBlock Text="*" Foreground="Red"
+                                                                   IsVisible="{Binding Column.IsRequired}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Column.Description}" FontSize="10"
+                                                               Foreground="Gray" Margin="0,2,0,3"
+                                                               IsVisible="{Binding Column.Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                                    <TextBox IsVisible="{Binding IsText}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             TextWrapping="Wrap" AcceptsReturn="True"
+                                                             MinHeight="50" Watermark="Enter text..."/>
+                                                    <TextBox IsVisible="{Binding IsNumber}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             Watermark="Enter number..." Width="180"
+                                                             HorizontalAlignment="Left"/>
+                                                    <CheckBox IsVisible="{Binding IsBoolean}"
+                                                              IsChecked="{Binding BooleanValue, Mode=TwoWay}"
+                                                              Content="Yes" Margin="0,3,0,0"/>
+                                                    <TextBox IsVisible="{Binding IsDate}"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             Watermark="YYYY-MM-DD" Width="180"
+                                                             HorizontalAlignment="Left"/>
+                                                    <ComboBox IsVisible="{Binding IsDropdown}"
+                                                              ItemsSource="{Binding Options}"
+                                                              SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                              PlaceholderText="Select..." Width="250"
+                                                              HorizontalAlignment="Left"/>
+                                                    <ItemsControl IsVisible="{Binding IsMultiSelect}"
+                                                                  ItemsSource="{Binding MultiSelectOptions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox Content="{Binding Label}"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                          Margin="0,2,12,2"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Column="3" Background="Gray" ResizeDirection="Columns"/>
+
+                <!-- Right: PDF Viewer -->
+                <Border Grid.Column="4" Margin="0,5,5,5" CornerRadius="8"
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    <controls:PdfViewerControl FilePath="{Binding CurrentPdfPath}"/>
+                </Border>
+            </Grid>
+
+            <!-- Panel 3: Schema Editor Mode -->
+            <Border IsVisible="{Binding IsSchemaEditorMode}" Padding="30" x:CompileBindings="False">
+                <ScrollViewer>
+                    <StackPanel Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
+                        <TextBlock Text="Schema Editor" FontSize="20" FontWeight="Bold"/>
+
+                        <!-- Schema name -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Schema Name" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding EditSchemaName, Mode=TwoWay}" Watermark="e.g. Data Extraction Form"
+                                     Width="400" HorizontalAlignment="Left"/>
+                        </StackPanel>
+
+                        <!-- Schema description -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Description (optional)" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding EditSchemaDescription, Mode=TwoWay}"
+                                     Watermark="Brief description of this extraction form"
+                                     Width="600" HorizontalAlignment="Left"/>
+                        </StackPanel>
+
+                        <Separator Margin="0,5"/>
+
+                        <TextBlock Text="Fields" FontSize="16" FontWeight="Bold"/>
+
+                        <!-- Column list -->
+                        <ItemsControl ItemsSource="{Binding EditColumns}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                            CornerRadius="6" Padding="12" Margin="0,4">
+                                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                            <!-- Row 0: Name + Type + buttons -->
+                                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                                <TextBox Text="{Binding Name, Mode=TwoWay}" Watermark="Field name"
+                                                         Width="200"/>
+                                                <ComboBox ItemsSource="{Binding AllColumnTypes}"
+                                                          SelectedItem="{Binding Type, Mode=TwoWay}"
+                                                          Width="130"/>
+                                                <CheckBox Content="Required" IsChecked="{Binding IsRequired, Mode=TwoWay}"
+                                                          VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                <Button Content="&#x2191;" Padding="8,4"
+                                                        Command="{Binding $parent[UserControl].((vm:ExtractionViewModel)DataContext).MoveColumnUpCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="&#x2193;" Padding="8,4"
+                                                        Command="{Binding $parent[UserControl].((vm:ExtractionViewModel)DataContext).MoveColumnDownCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="&#x2715;" Padding="8,4"
+                                                        Command="{Binding $parent[UserControl].((vm:ExtractionViewModel)DataContext).RemoveColumnFromEditorCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </StackPanel>
+
+                                            <!-- Row 1: Description -->
+                                            <TextBox Grid.Row="1" Grid.ColumnSpan="2"
+                                                     Text="{Binding Description, Mode=TwoWay}"
+                                                     Watermark="Field description (optional)" Margin="0,6,0,0"/>
+
+                                            <!-- Row 2: Options (only for Dropdown/MultiSelect) -->
+                                            <TextBox Grid.Row="2" Grid.ColumnSpan="2"
+                                                     Text="{Binding OptionsText, Mode=TwoWay}"
+                                                     Watermark="Options (comma-separated, e.g. RCT, Cohort, Case-Control)"
+                                                     IsVisible="{Binding ShowOptions}" Margin="0,6,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Add field button -->
+                        <Button Content="+ Add Field" Command="{Binding AddColumnToEditorCommand}"
+                                Padding="15,8" HorizontalAlignment="Left"/>
+
+                        <Separator Margin="0,5"/>
+
+                        <!-- Save/Cancel -->
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Content="Save Schema" Command="{Binding SaveSchemaCommand}"
+                                    Padding="20,10" FontWeight="SemiBold"/>
+                            <Button Content="Cancel" Command="{Binding CancelSchemaEditorCommand}" Padding="20,10"/>
+                        </StackPanel>
                     </StackPanel>
-                </Grid>
+                </ScrollViewer>
             </Border>
         </Grid>
 
         <!-- Loading Indicator -->
-        <Border Grid.RowSpan="2" Background="#80000000"
+        <Border Grid.RowSpan="3" Background="#80000000"
                 IsVisible="{Binding IsLoading}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200"/>

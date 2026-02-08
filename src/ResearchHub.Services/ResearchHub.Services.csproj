@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.102.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ResearchHub.Core\ResearchHub.Core.csproj" />
     <ProjectReference Include="..\ResearchHub.Data\ResearchHub.Data.csproj" />
   </ItemGroup>
