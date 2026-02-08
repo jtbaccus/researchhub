@@ -14,6 +14,34 @@ public class DeduplicationService : IDeduplicationService
         "is", "are", "was", "were", "with", "by", "from", "into", "using", "via"
     };
 
+    private static readonly Dictionary<string, string> BritishToAmerican = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // -our → -or
+        { "behavioural", "behavioral" }, { "behaviour", "behavior" },
+        { "colour", "color" }, { "tumour", "tumor" }, { "favour", "favor" },
+        { "honour", "honor" }, { "labour", "labor" }, { "neighbourhood", "neighborhood" },
+        // -ise → -ize
+        { "randomised", "randomized" }, { "standardised", "standardized" },
+        { "characterised", "characterized" }, { "recognised", "recognized" },
+        { "organised", "organized" }, { "specialised", "specialized" },
+        { "utilised", "utilized" }, { "minimised", "minimized" },
+        { "optimised", "optimized" }, { "summarised", "summarized" },
+        { "analysed", "analyzed" },
+        // -re → -er
+        { "centre", "center" }, { "fibre", "fiber" }, { "litre", "liter" },
+        // -ae/oe → e
+        { "anaemia", "anemia" }, { "anaesthesia", "anesthesia" },
+        { "oedema", "edema" }, { "oesophagus", "esophagus" },
+        { "haemorrhage", "hemorrhage" }, { "haemoglobin", "hemoglobin" },
+        { "leukaemia", "leukemia" }, { "paediatric", "pediatric" },
+        { "gynaecology", "gynecology" }, { "orthopaedic", "orthopedic" },
+        { "foetal", "fetal" }, { "foetus", "fetus" }, { "diarrhoea", "diarrhea" },
+        // double-l → single-l
+        { "modelling", "modeling" }, { "labelling", "labeling" },
+        { "counselling", "counseling" }, { "signalling", "signaling" },
+        { "travelling", "traveling" }, { "cancelling", "canceling" },
+    };
+
     public DeduplicationService(IReferenceRepository referenceRepository)
     {
         _referenceRepository = referenceRepository;
@@ -77,38 +105,82 @@ public class DeduplicationService : IDeduplicationService
             .Where(signature => !string.IsNullOrWhiteSpace(signature.NormalizedTitle))
             .ToList();
 
-        IEnumerable<IGrouping<int, TitleSignature>> groups;
-
-        if (options.RequireYearMatch)
+        if (!options.RequireYearMatch)
         {
-            groups = signatures
-                .Where(signature => signature.Reference.Year.HasValue)
-                .GroupBy(signature => signature.Reference.Year!.Value);
-        }
-        else
-        {
-            groups = signatures.GroupBy(signature => signature.Reference.Year ?? -1);
+            // All signatures in one group — compare every pair
+            var items = signatures;
+            ComparePairs(items, items, 0, matches, options);
+            return;
         }
 
-        foreach (var group in groups)
+        // Group by year (exclude null years when RequireYearMatch is true)
+        var yearGroups = new Dictionary<int, List<TitleSignature>>();
+        foreach (var sig in signatures)
         {
-            var items = group.ToList();
-            for (var i = 0; i < items.Count; i++)
+            if (!sig.Reference.Year.HasValue)
+                continue;
+            var year = sig.Reference.Year.Value;
+            if (!yearGroups.TryGetValue(year, out var list))
             {
-                for (var j = i + 1; j < items.Count; j++)
+                list = new List<TitleSignature>();
+                yearGroups[year] = list;
+            }
+            list.Add(sig);
+        }
+
+        var years = yearGroups.Keys.OrderBy(y => y).ToList();
+
+        // Within-group comparisons
+        foreach (var year in years)
+        {
+            var items = yearGroups[year];
+            ComparePairs(items, items, 0, matches, options);
+        }
+
+        // Cross-group comparisons for YearTolerance > 0
+        if (options.YearTolerance > 0)
+        {
+            foreach (var year in years)
+            {
+                for (var d = 1; d <= options.YearTolerance; d++)
                 {
-                    var left = items[i];
-                    var right = items[j];
-
-                    if (!IsYearMatch(left.Reference.Year, right.Reference.Year, options))
-                        continue;
-
-                    var similarity = ComputeTitleSimilarity(left, right);
-                    if (similarity < options.TitleSimilarityThreshold)
-                        continue;
-
-                    AddMatch(matches, left.Reference, right.Reference, DuplicateReason.TitleYear, similarity);
+                    if (yearGroups.TryGetValue(year + d, out var adjacentItems))
+                    {
+                        ComparePairs(yearGroups[year], adjacentItems, -1, matches, options);
+                    }
                 }
+            }
+        }
+    }
+
+    private static void ComparePairs(
+        List<TitleSignature> leftGroup,
+        List<TitleSignature> rightGroup,
+        int startJ,
+        Dictionary<(int, int), DuplicateMatch> matches,
+        DeduplicationOptions options)
+    {
+        // startJ: 0 means same-group (use i+1 to avoid self-pairs), -1 means cross-group (compare all)
+        var crossGroup = startJ < 0;
+
+        for (var i = 0; i < leftGroup.Count; i++)
+        {
+            var jStart = crossGroup ? 0 : i + 1;
+            var jList = crossGroup ? rightGroup : leftGroup;
+
+            for (var j = jStart; j < jList.Count; j++)
+            {
+                var left = leftGroup[i];
+                var right = jList[j];
+
+                if (!IsYearMatch(left.Reference.Year, right.Reference.Year, options))
+                    continue;
+
+                var similarity = ComputeTitleSimilarity(left, right);
+                if (similarity < options.TitleSimilarityThreshold)
+                    continue;
+
+                AddMatch(matches, left.Reference, right.Reference, DuplicateReason.TitleYear, similarity);
             }
         }
     }
@@ -244,8 +316,17 @@ public class DeduplicationService : IDeduplicationService
         }
 
         var normalizedTitle = normalized.ToString().Trim();
-        var tokens = normalizedTitle
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+
+        // Normalize British → American spelling variants
+        var words = normalizedTitle.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < words.Length; i++)
+        {
+            if (BritishToAmerican.TryGetValue(words[i], out var american))
+                words[i] = american;
+        }
+        normalizedTitle = string.Join(' ', words);
+
+        var tokens = words
             .Where(token => token.Length > 2)
             .Where(token => !StopWords.Contains(token))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

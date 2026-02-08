@@ -51,6 +51,8 @@ Polish end-to-end workflow and prepare for real-world testing with reference dat
 
 ## Known Issues/Questions
 
-- Fuzzy matching thresholds may need tuning with real datasets.
+- ~~Fuzzy matching thresholds may need tuning with real datasets.~~ Threshold sweep confirmed 0.88 as optimal F1.
+- ~~Year tolerance bug: cross-year-group refs not compared with YearTolerance > 0.~~ Fixed — cross-group comparison now enabled.
+- ~~British/American spelling sensitivity.~~ Fixed — ~30 common medical/academic spelling variants normalized before comparison.
 - PDFtoImage emits CA1416 platform-compat warnings (harmless for desktop-only app).
 - ClosedXML must stay at 0.102.x to avoid SkiaSharp version conflict with Avalonia.
