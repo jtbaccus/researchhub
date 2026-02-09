@@ -127,6 +127,16 @@ public partial class ScreeningViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(DuplicateProgressPercentage))]
     private int _duplicatesSkippedCount;
 
+    // Dedup settings
+    [ObservableProperty]
+    private int _dedupYearTolerance;
+
+    [ObservableProperty]
+    private bool _dedupNormalizeSpelling = true;
+
+    [ObservableProperty]
+    private bool _isDedupSettingsVisible;
+
     private List<DuplicateMatch> _duplicatePairs = new();
     private int _currentDuplicateIndex;
 
@@ -435,8 +445,13 @@ public partial class ScreeningViewModel : ViewModelBase
         IsDuplicateCheckRunning = true;
         try
         {
+            var options = new DeduplicationOptions
+            {
+                YearTolerance = DedupYearTolerance,
+                NormalizeSpelling = DedupNormalizeSpelling
+            };
             var matches = await App.DeduplicationService.FindPotentialDuplicatesAsync(
-                _mainViewModel.CurrentProject.Id);
+                _mainViewModel.CurrentProject.Id, options);
 
             if (matches.Count == 0)
             {

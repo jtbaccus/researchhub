@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ResearchHub.Core.Models;
 using ResearchHub.Data.Repositories;
@@ -101,7 +102,7 @@ public class DeduplicationService : IDeduplicationService
     {
         var signatures = references
             .Where(reference => !string.IsNullOrWhiteSpace(reference.Title))
-            .Select(BuildTitleSignature)
+            .Select(r => BuildTitleSignature(r, options.NormalizeSpelling))
             .Where(signature => !string.IsNullOrWhiteSpace(signature.NormalizedTitle))
             .ToList();
 
@@ -231,7 +232,8 @@ public class DeduplicationService : IDeduplicationService
             .Replace("http://doi.org/", "", StringComparison.OrdinalIgnoreCase)
             .Replace("https://dx.doi.org/", "", StringComparison.OrdinalIgnoreCase)
             .Replace("http://dx.doi.org/", "", StringComparison.OrdinalIgnoreCase)
-            .Trim();
+            .Trim()
+            .TrimEnd('.', ',');
 
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
@@ -257,7 +259,42 @@ public class DeduplicationService : IDeduplicationService
     {
         var jaccard = Jaccard(left.Tokens, right.Tokens);
         var dice = DiceCoefficient(left.CompactTitle, right.CompactTitle);
-        return (jaccard * 0.6) + (dice * 0.4);
+        var fullSimilarity = (jaccard * 0.6) + (dice * 0.4);
+
+        // Subtitle-aware secondary check: if either title has a colon/dash separator,
+        // compare only the pre-separator portions. If that similarity is very high (>0.95),
+        // use it to catch duplicates where one database truncated the subtitle.
+        if (left.PreColonTokens != null && right.PreColonTokens != null
+            && left.PreColonCompact != null && right.PreColonCompact != null)
+        {
+            var preJaccard = Jaccard(left.PreColonTokens, right.PreColonTokens);
+            var preDice = DiceCoefficient(left.PreColonCompact, right.PreColonCompact);
+            var preSimilarity = (preJaccard * 0.6) + (preDice * 0.4);
+            if (preSimilarity > 0.95)
+                return Math.Max(fullSimilarity, preSimilarity);
+        }
+        // Also handle: one title has the subtitle, the other doesn't (truncated).
+        // Compare the full short title against the pre-colon portion of the long title.
+        else if (left.PreColonTokens != null && left.PreColonCompact != null
+                 && right.PreColonTokens == null)
+        {
+            var preJaccard = Jaccard(left.PreColonTokens, right.Tokens);
+            var preDice = DiceCoefficient(left.PreColonCompact, right.CompactTitle);
+            var preSimilarity = (preJaccard * 0.6) + (preDice * 0.4);
+            if (preSimilarity > 0.95)
+                return Math.Max(fullSimilarity, preSimilarity);
+        }
+        else if (right.PreColonTokens != null && right.PreColonCompact != null
+                 && left.PreColonTokens == null)
+        {
+            var preJaccard = Jaccard(right.PreColonTokens, left.Tokens);
+            var preDice = DiceCoefficient(right.PreColonCompact, left.CompactTitle);
+            var preSimilarity = (preJaccard * 0.6) + (preDice * 0.4);
+            if (preSimilarity > 0.95)
+                return Math.Max(fullSimilarity, preSimilarity);
+        }
+
+        return fullSimilarity;
     }
 
     private static double Jaccard(HashSet<string> left, HashSet<string> right)
@@ -295,9 +332,20 @@ public class DeduplicationService : IDeduplicationService
         return bigrams;
     }
 
-    private static TitleSignature BuildTitleSignature(Reference reference)
+    private static TitleSignature BuildTitleSignature(Reference reference, bool normalizeSpelling)
     {
         var title = reference.Title ?? string.Empty;
+
+        // Decompose accented characters (é → e + combining accent) then strip combining marks
+        var decomposed = title.Normalize(NormalizationForm.FormD);
+        var stripped = new StringBuilder(decomposed.Length);
+        foreach (var ch in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                stripped.Append(ch);
+        }
+        title = stripped.ToString();
+
         var normalized = new StringBuilder(title.Length);
         var lastWasSpace = false;
 
@@ -319,10 +367,13 @@ public class DeduplicationService : IDeduplicationService
 
         // Normalize British → American spelling variants
         var words = normalizedTitle.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        for (var i = 0; i < words.Length; i++)
+        if (normalizeSpelling)
         {
-            if (BritishToAmerican.TryGetValue(words[i], out var american))
-                words[i] = american;
+            for (var i = 0; i < words.Length; i++)
+            {
+                if (BritishToAmerican.TryGetValue(words[i], out var american))
+                    words[i] = american;
+            }
         }
         normalizedTitle = string.Join(' ', words);
 
@@ -333,8 +384,24 @@ public class DeduplicationService : IDeduplicationService
 
         var compact = string.Concat(normalizedTitle.Where(char.IsLetterOrDigit));
 
-        return new TitleSignature(reference, title, normalizedTitle, compact, tokens);
+        // Pre-colon data for subtitle-aware matching
+        string? preColonCompact = null;
+        HashSet<string>? preColonTokens = null;
+        var colonIdx = normalizedTitle.IndexOf(':');
+        if (colonIdx < 0) colonIdx = normalizedTitle.IndexOf(" - ");
+        if (colonIdx > 10)
+        {
+            var preColon = normalizedTitle[..colonIdx].Trim();
+            var preColonWords = preColon.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            preColonCompact = string.Concat(preColon.Where(char.IsLetterOrDigit));
+            preColonTokens = preColonWords
+                .Where(token => token.Length > 2)
+                .Where(token => !StopWords.Contains(token))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new TitleSignature(reference, title, normalizedTitle, compact, tokens, preColonCompact, preColonTokens);
     }
 
-    private sealed record TitleSignature(Reference Reference, string OriginalTitle, string NormalizedTitle, string CompactTitle, HashSet<string> Tokens);
+    private sealed record TitleSignature(Reference Reference, string OriginalTitle, string NormalizedTitle, string CompactTitle, HashSet<string> Tokens, string? PreColonCompact, HashSet<string>? PreColonTokens);
 }

@@ -11,9 +11,10 @@ public enum DuplicateReason
 
 public class DeduplicationOptions
 {
-    public double TitleSimilarityThreshold { get; set; } = 0.88;
+    public double TitleSimilarityThreshold { get; set; } = 0.86;
     public bool RequireYearMatch { get; set; } = true;
     public int YearTolerance { get; set; } = 0;
+    public bool NormalizeSpelling { get; set; } = true;
 }
 
 public class DuplicateMatch
