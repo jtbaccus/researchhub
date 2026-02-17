@@ -8,7 +8,7 @@
              x:Class="ResearchHub.App.Views.ExtractionView"
              x:DataType="vm:ExtractionViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
 
         <!-- Row 0: Toolbar -->
         <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
@@ -37,8 +37,19 @@
             </Grid>
         </Border>
 
-        <!-- Row 1: Progress bar (visible when schema selected and not editing) -->
-        <Border Grid.Row="1" Padding="10,6"
+        <!-- Row 1: Error State -->
+        <Border Grid.Row="1" Padding="10" Margin="10,4" CornerRadius="4"
+                Background="#1AE74C3C"
+                IsVisible="{Binding HasError}">
+            <TextBlock Foreground="#E74C3C" TextWrapping="Wrap">
+                <Run Text="&#x26A0;"/>
+                <Run Text=" "/>
+                <Run Text="{Binding ErrorMessage}"/>
+            </TextBlock>
+        </Border>
+
+        <!-- Row 2: Progress bar (visible when schema selected and not editing) -->
+        <Border Grid.Row="2" Padding="10,6"
                 IsVisible="{Binding IsFormMode}"
                 Background="{DynamicResource SystemControlBackgroundChromeLowBrush}">
             <Grid ColumnDefinitions="*,Auto">
@@ -49,8 +60,8 @@
             </Grid>
         </Border>
 
-        <!-- Row 2: Content area — overlapping panels -->
-        <Grid Grid.Row="2">
+        <!-- Row 3: Content area — overlapping panels -->
+        <Grid Grid.Row="3">
 
             <!-- Panel 1: Empty state (no schema selected, not editing) -->
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -103,11 +114,29 @@
                 <!-- Right: Extraction form -->
                 <Border Grid.Column="1" Padding="20">
                     <Grid>
-                        <!-- No reference selected -->
-                        <TextBlock Text="Select a reference from the list to begin extraction."
-                                   FontSize="14" Foreground="Gray"
-                                   VerticalAlignment="Center" HorizontalAlignment="Center"
-                                   IsVisible="{Binding !HasCurrentRow}"/>
+                        <!-- No references in project -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    IsVisible="{Binding !HasReferenceItems}">
+                            <TextBlock Text="No references in project"
+                                       FontSize="18" Foreground="#888888"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Include references through screening to begin extraction."
+                                       FontSize="13" Foreground="#AAAAAA"
+                                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+
+                        <!-- No reference selected (but references exist) -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    IsVisible="{Binding !HasCurrentRow}">
+                            <StackPanel IsVisible="{Binding HasReferenceItems}">
+                                <TextBlock Text="Select a reference to begin extraction"
+                                           FontSize="18" Foreground="#888888"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Click on a reference in the list or use arrow keys to navigate"
+                                           FontSize="13" Foreground="#AAAAAA"
+                                           HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
 
                         <!-- Form with data -->
                         <ScrollViewer IsVisible="{Binding HasCurrentRow}">
@@ -246,10 +275,15 @@
                 <!-- Center: Extraction form (compact) -->
                 <Border Grid.Column="2" Padding="15">
                     <Grid>
-                        <TextBlock Text="Select a reference to begin extraction."
-                                   FontSize="14" Foreground="Gray"
-                                   VerticalAlignment="Center" HorizontalAlignment="Center"
-                                   IsVisible="{Binding !HasCurrentRow}"/>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    IsVisible="{Binding !HasCurrentRow}">
+                            <TextBlock Text="Select a reference to begin extraction"
+                                       FontSize="18" Foreground="#888888"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Click on a reference in the list"
+                                       FontSize="13" Foreground="#AAAAAA"
+                                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
 
                         <ScrollViewer IsVisible="{Binding HasCurrentRow}">
                             <StackPanel Spacing="10" x:CompileBindings="False">
@@ -431,7 +465,7 @@
         </Grid>
 
         <!-- Loading Indicator -->
-        <Border Grid.RowSpan="3" Background="#80000000"
+        <Border Grid.RowSpan="4" Background="#80000000"
                 IsVisible="{Binding IsLoading}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200"/>

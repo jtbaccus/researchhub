@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using ResearchHub.App.ViewModels;
@@ -10,6 +11,34 @@ public partial class PrismaView : UserControl
     public PrismaView()
     {
         InitializeComponent();
+        KeyDown += OnKeyDown;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not PrismaViewModel vm) return;
+
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            switch (e.Key)
+            {
+                case Key.E:
+                    ExportSvgButton_Click(this, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+            }
+        }
+        else
+        {
+            switch (e.Key)
+            {
+                case Key.R:
+                    if (vm.RefreshCommand.CanExecute(null))
+                        vm.RefreshCommand.Execute(null);
+                    e.Handled = true;
+                    break;
+            }
+        }
     }
 
     public async void ExportSvgButton_Click(object? sender, RoutedEventArgs e)

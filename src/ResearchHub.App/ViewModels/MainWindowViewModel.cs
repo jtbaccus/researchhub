@@ -21,6 +21,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _hasProject;
 
     [ObservableProperty]
+    private bool _isKeyboardShortcutsVisible;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDashboardActive))]
     [NotifyPropertyChangedFor(nameof(IsLibraryActive))]
     [NotifyPropertyChangedFor(nameof(IsScreeningActive))]
@@ -130,5 +133,17 @@ public partial class MainWindowViewModel : ViewModelBase
         _prismaViewModel = new PrismaViewModel(this);
         CurrentView = _prismaViewModel;
         ActiveNavSection = "PRISMA";
+    }
+
+    [RelayCommand]
+    private void ToggleKeyboardShortcuts()
+    {
+        IsKeyboardShortcutsVisible = !IsKeyboardShortcutsVisible;
+    }
+
+    [RelayCommand]
+    private void DismissKeyboardShortcuts()
+    {
+        IsKeyboardShortcutsVisible = false;
     }
 }

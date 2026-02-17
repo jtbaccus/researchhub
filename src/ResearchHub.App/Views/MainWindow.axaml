@@ -61,6 +61,9 @@
                     <TextBlock Text="{Binding CurrentProject.Title, FallbackValue='No Project'}"
                                Foreground="White" VerticalAlignment="Center"/>
                     <Button Content="+ New Project" Command="{Binding NewProjectCommand}" Classes="nav" />
+                    <Button Content="?" Command="{Binding ToggleKeyboardShortcutsCommand}"
+                            Classes="nav" FontWeight="Bold"
+                            ToolTip.Tip="Keyboard shortcuts (?)"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -85,6 +88,54 @@
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
+
+        <!-- Keyboard Shortcuts Overlay -->
+        <Border Grid.Row="1" Background="#CC000000" IsVisible="{Binding IsKeyboardShortcutsVisible}"
+                ZIndex="100">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    CornerRadius="8" Padding="30" Margin="100,50"
+                    MaxWidth="600" MaxHeight="500"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1">
+                <StackPanel Spacing="15">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Keyboard Shortcuts" FontSize="20" FontWeight="Bold"/>
+                        <Button Grid.Column="1" Content="Close" Command="{Binding DismissKeyboardShortcutsCommand}"
+                                Padding="10,5"/>
+                    </Grid>
+
+                    <Separator/>
+
+                    <TextBlock Text="Library" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="Ctrl+I   Import references" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="Ctrl+F   Focus search" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="Del      Delete selected reference" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+
+                    <Separator/>
+
+                    <TextBlock Text="Screening" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="I        Include reference" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="E        Exclude reference" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="M        Maybe" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="P        Toggle PDF panel" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="A        Ask LLM for suggestion" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+
+                    <Separator/>
+
+                    <TextBlock Text="Extraction" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="Ctrl+S   Save extraction" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="Ctrl+E   Export data" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="P        Toggle PDF panel" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+
+                    <Separator/>
+
+                    <TextBlock Text="PRISMA" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="R        Refresh diagram" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                    <TextBlock Text="Ctrl+E   Export SVG" FontSize="12" FontFamily="Consolas,Menlo,monospace"/>
+                </StackPanel>
+            </Border>
+        </Border>
 
         <!-- Status Bar -->
         <Border Grid.Row="2" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"

@@ -1,3 +1,4 @@
+using System.Text;
 using ResearchHub.Core.Exporters;
 using ResearchHub.Core.Models;
 using ResearchHub.Core.Parsers;
@@ -10,6 +11,9 @@ public class LibraryService : ILibraryService
     private readonly IReferenceRepository _referenceRepository;
     private readonly Dictionary<string, IReferenceParser> _parsers;
     private readonly Dictionary<string, IReferenceExporter> _exporters;
+
+    private const long WarnFileSizeBytes = 50 * 1024 * 1024;   // 50 MB
+    private const long RejectFileSizeBytes = 200 * 1024 * 1024; // 200 MB
 
     public LibraryService(IReferenceRepository referenceRepository)
     {
@@ -40,7 +44,30 @@ public class LibraryService : ILibraryService
 
     public async Task<ImportResult> ImportFromFileAsync(int projectId, string filePath)
     {
+        return await ImportFromFileAsync(projectId, filePath, null);
+    }
+
+    public async Task<ImportResult> ImportFromFileAsync(int projectId, string filePath, IProgress<ImportProgress>? progress = null)
+    {
         var result = new ImportResult();
+
+        // File existence check
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Import file not found: {filePath}", filePath);
+        }
+
+        // File size checks
+        var fileInfo = new FileInfo(filePath);
+        if (fileInfo.Length > RejectFileSizeBytes)
+        {
+            result.Errors.Add($"File is too large ({fileInfo.Length / (1024 * 1024)} MB). Maximum allowed size is 200 MB.");
+            return result;
+        }
+        if (fileInfo.Length > WarnFileSizeBytes)
+        {
+            result.Warnings.Add($"Large file ({fileInfo.Length / (1024 * 1024)} MB). Import may take a while.");
+        }
 
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
         if (!_parsers.TryGetValue(extension, out var parser))
@@ -51,12 +78,31 @@ public class LibraryService : ILibraryService
 
         try
         {
-            var references = parser.ParseFile(filePath).ToList();
+            // Encoding detection: try UTF-8 first, fall back to Latin-1
+            string content;
+            try
+            {
+                content = await File.ReadAllTextAsync(filePath, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
+            }
+            catch (DecoderFallbackException)
+            {
+                result.Warnings.Add("File is not valid UTF-8. Falling back to Latin-1 encoding.");
+                content = await File.ReadAllTextAsync(filePath, Encoding.Latin1);
+            }
+
+            var references = parser.Parse(content).ToList();
+
+            // Set SourceFile on each parsed reference
+            foreach (var reference in references)
+            {
+                reference.SourceFile = filePath;
+            }
+
             result.TotalParsed = references.Count;
 
-            return await ImportReferencesAsync(projectId, references, result);
+            return await ImportReferencesAsync(projectId, references, result, progress);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not FileNotFoundException)
         {
             result.Errors.Add($"Error parsing file: {ex.Message}");
             return result;
@@ -65,35 +111,70 @@ public class LibraryService : ILibraryService
 
     public async Task<ImportResult> ImportReferencesAsync(int projectId, IEnumerable<Reference> references)
     {
-        return await ImportReferencesAsync(projectId, references.ToList(), new ImportResult());
+        return await ImportReferencesAsync(projectId, references.ToList(), new ImportResult(), null);
     }
 
-    private async Task<ImportResult> ImportReferencesAsync(int projectId, List<Reference> references, ImportResult result)
+    private async Task<ImportResult> ImportReferencesAsync(
+        int projectId,
+        List<Reference> references,
+        ImportResult result,
+        IProgress<ImportProgress>? progress = null)
     {
         result.TotalParsed = references.Count;
+        var total = references.Count;
 
-        foreach (var reference in references)
+        for (var i = 0; i < references.Count; i++)
         {
+            var reference = references[i];
             try
             {
-                // Check for duplicates by DOI or PMID
+                // Report progress
+                progress?.Report(new ImportProgress
+                {
+                    Current = i + 1,
+                    Total = total,
+                    CurrentTitle = reference.Title ?? "(no title)"
+                });
+
+                // Skip references with no title
+                if (string.IsNullOrWhiteSpace(reference.Title))
+                {
+                    result.SkippedNoTitle++;
+                    continue;
+                }
+
+                // Check for duplicates by DOI (normalized)
                 if (!string.IsNullOrEmpty(reference.Doi))
                 {
-                    var existing = await _referenceRepository.GetByDoiAsync(projectId, reference.Doi);
-                    if (existing != null)
+                    var normalizedDoi = NormalizeDoi(reference.Doi);
+                    if (normalizedDoi != null)
                     {
-                        result.Duplicates++;
-                        continue;
+                        var existing = await _referenceRepository.GetByDoiAsync(projectId, reference.Doi);
+                        if (existing != null)
+                        {
+                            // Also try normalized comparison
+                            result.Duplicates++;
+                            continue;
+                        }
+                        // Normalize the DOI on the reference before storing
+                        reference.Doi = normalizedDoi;
                     }
                 }
 
+                // Check for duplicates by PMID (normalized)
                 if (!string.IsNullOrEmpty(reference.Pmid))
                 {
-                    var existing = await _referenceRepository.GetByPmidAsync(projectId, reference.Pmid);
-                    if (existing != null)
+                    var normalizedPmid = NormalizePmid(reference.Pmid);
+                    if (normalizedPmid != null)
                     {
-                        result.Duplicates++;
-                        continue;
+                        var existing = await _referenceRepository.GetByPmidAsync(projectId, reference.Pmid);
+                        if (existing != null)
+                        {
+                            result.Duplicates++;
+                            continue;
+                        }
+                        // Normalize the PMID on the reference before storing
+                        reference.Pmid = normalizedPmid;
                     }
                 }
 
@@ -110,6 +191,46 @@ public class LibraryService : ILibraryService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Normalizes a DOI string by stripping URL prefixes, lowering case,
+    /// trimming whitespace, and removing trailing punctuation.
+    /// Mirrors DeduplicationService.NormalizeDoi pattern.
+    /// </summary>
+    internal static string? NormalizeDoi(string? doi)
+    {
+        if (string.IsNullOrWhiteSpace(doi))
+            return null;
+
+        var normalized = doi.Trim().ToLowerInvariant();
+
+        if (normalized.StartsWith("doi:"))
+            normalized = normalized[4..];
+
+        normalized = normalized
+            .Replace("https://doi.org/", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("http://doi.org/", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("https://dx.doi.org/", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("http://dx.doi.org/", "", StringComparison.OrdinalIgnoreCase)
+            .Trim()
+            .TrimEnd('.', ',');
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    /// <summary>
+    /// Normalizes a PMID by extracting only digit characters
+    /// (strips leading zeros implicitly by trimming).
+    /// Mirrors DeduplicationService.NormalizePmid pattern.
+    /// </summary>
+    internal static string? NormalizePmid(string? pmid)
+    {
+        if (string.IsNullOrWhiteSpace(pmid))
+            return null;
+
+        var digits = new string(pmid.Where(char.IsDigit).ToArray());
+        return string.IsNullOrWhiteSpace(digits) ? null : digits;
     }
 
     public async Task<IEnumerable<Reference>> GetReferencesAsync(int projectId)

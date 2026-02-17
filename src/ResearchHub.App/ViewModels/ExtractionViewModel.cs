@@ -41,6 +41,12 @@ public partial class ExtractionViewModel : ViewModelBase
     private bool _isLoading;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _errorMessage = "";
+
+    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFormMode))]
     [NotifyPropertyChangedFor(nameof(IsFormWithPdf))]
     [NotifyPropertyChangedFor(nameof(IsFormWithoutPdf))]
@@ -78,6 +84,7 @@ public partial class ExtractionViewModel : ViewModelBase
     public bool IsSchemaEditorMode => IsEditingSchema;
     public bool IsFormWithPdf => IsFormMode && IsPdfPanelVisible;
     public bool IsFormWithoutPdf => IsFormMode && !IsPdfPanelVisible;
+    public bool HasReferenceItems => ReferenceItems.Count > 0;
 
     public Reference? SelectedReference => SelectedReferenceItem?.Reference;
 
@@ -120,6 +127,7 @@ public partial class ExtractionViewModel : ViewModelBase
             {
                 ReferenceItems.Add(new ExtractionReferenceItem(reference, _extractedReferenceIds.Contains(reference.Id)));
             }
+            OnPropertyChanged(nameof(HasReferenceItems));
         }
         finally
         {
@@ -226,13 +234,21 @@ public partial class ExtractionViewModel : ViewModelBase
         if (reference == null || SelectedSchema == null || App.ExtractionService == null) return;
         if (CurrentRowViewModel == null) return;
 
-        await App.ExtractionService.SaveExtractionAsync(
-            reference.Id,
-            SelectedSchema.Id,
-            CurrentRowViewModel.GetValues());
+        ErrorMessage = "";
+        try
+        {
+            await App.ExtractionService.SaveExtractionAsync(
+                reference.Id,
+                SelectedSchema.Id,
+                CurrentRowViewModel.GetValues());
 
-        _mainViewModel.StatusMessage = "Extraction saved";
-        await LoadExtractionProgressAsync();
+            _mainViewModel.StatusMessage = "Extraction saved";
+            await LoadExtractionProgressAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     // --- Export ---

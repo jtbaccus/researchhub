@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ResearchHub.Core.Models;
+using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,12 @@ public partial class PrismaViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isLoading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _errorMessage = "";
+
+    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
     public bool HasCounts => Counts != null;
 
@@ -69,10 +76,15 @@ public partial class PrismaViewModel : ViewModelBase
         if (App.PrismaService == null || _mainViewModel.CurrentProject == null) return;
 
         IsLoading = true;
+        ErrorMessage = "";
         try
         {
             Counts = await App.PrismaService.GetFlowCountsAsync(_mainViewModel.CurrentProject.Id);
             _mainViewModel.StatusMessage = "PRISMA flow diagram updated.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
         }
         finally
         {
@@ -85,9 +97,17 @@ public partial class PrismaViewModel : ViewModelBase
     {
         if (Counts == null) return;
 
-        var svg = GenerateSvg(Counts);
-        await File.WriteAllTextAsync(filePath, svg);
-        _mainViewModel.StatusMessage = $"PRISMA diagram exported to {Path.GetFileName(filePath)}";
+        ErrorMessage = "";
+        try
+        {
+            var svg = GenerateSvg(Counts);
+            await File.WriteAllTextAsync(filePath, svg);
+            _mainViewModel.StatusMessage = $"PRISMA diagram exported to {Path.GetFileName(filePath)}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     public static string GenerateSvg(PrismaFlowCounts counts)

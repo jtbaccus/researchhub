@@ -9,6 +9,8 @@ public class BibTexParser : IReferenceParser
     public string Format => "BibTeX";
     public string[] SupportedExtensions => new[] { ".bib", ".bibtex" };
 
+    private const int MaxBraceDepth = 50;
+
     // Matches @type{key, ... }
     private static readonly Regex EntryPattern = new(
         @"@(\w+)\s*[\{\(]\s*([^,]*),",
@@ -28,9 +30,16 @@ public class BibTexParser : IReferenceParser
 
         foreach (var entry in entries)
         {
-            var reference = ParseEntry(entry);
-            if (reference != null)
-                references.Add(reference);
+            try
+            {
+                var reference = ParseEntry(entry);
+                if (reference != null)
+                    references.Add(reference);
+            }
+            catch (Exception)
+            {
+                // Skip malformed entry and continue parsing
+            }
         }
 
         return references;
@@ -38,7 +47,18 @@ public class BibTexParser : IReferenceParser
 
     public IEnumerable<Reference> ParseFile(string filePath)
     {
-        var content = File.ReadAllText(filePath, Encoding.UTF8);
+        // Encoding detection: try UTF-8 first, fall back to Latin-1
+        string content;
+        try
+        {
+            content = File.ReadAllText(filePath,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
+        }
+        catch (DecoderFallbackException)
+        {
+            content = File.ReadAllText(filePath, Encoding.Latin1);
+        }
+
         var references = Parse(content).ToList();
         foreach (var reference in references)
         {
@@ -71,6 +91,15 @@ public class BibTexParser : IReferenceParser
                 {
                     braceDepth++;
                     seenOpening = true;
+                    // Depth limit: abandon this entry if braces are too deep
+                    if (braceDepth > MaxBraceDepth)
+                    {
+                        currentEntry.Clear();
+                        inEntry = false;
+                        seenOpening = false;
+                        braceDepth = 0;
+                        continue;
+                    }
                 }
                 else if (ch == '}')
                     braceDepth = Math.Max(0, braceDepth - 1);
@@ -255,7 +284,15 @@ public class BibTexParser : IReferenceParser
         {
             var ch = input[index];
             if (ch == '{')
+            {
                 depth++;
+                if (depth > MaxBraceDepth)
+                {
+                    // Bail out: skip to end or closing brace at depth 1
+                    index = input.Length;
+                    return input.Substring(start + 1);
+                }
+            }
             else if (ch == '}')
             {
                 depth--;

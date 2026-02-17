@@ -35,7 +35,20 @@ public class CsvReferenceParser : IReferenceParser
 
     public IEnumerable<Reference> ParseFile(string filePath)
     {
-        using var reader = new StreamReader(filePath, Encoding.UTF8);
+        // Encoding detection: read raw bytes, try UTF-8 decode, fall back to Latin-1
+        string content;
+        var rawBytes = File.ReadAllBytes(filePath);
+        try
+        {
+            content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+                .GetString(rawBytes);
+        }
+        catch (DecoderFallbackException)
+        {
+            content = Encoding.Latin1.GetString(rawBytes);
+        }
+
+        using var reader = new StringReader(content);
         var references = ParseFromReader(reader).ToList();
         foreach (var reference in references)
         {
@@ -43,6 +56,8 @@ public class CsvReferenceParser : IReferenceParser
         }
         return references;
     }
+
+    private const int RowCountWarningThreshold = 10_000;
 
     private IEnumerable<Reference> ParseFromReader(TextReader reader)
     {
@@ -64,12 +79,21 @@ public class CsvReferenceParser : IReferenceParser
             return references;
 
         var columnMap = MapColumns(headerRecord);
+        var rowNumber = 0;
 
         while (csv.Read())
         {
-            var reference = ParseRow(csv, columnMap, headerRecord);
-            if (reference != null)
-                references.Add(reference);
+            rowNumber++;
+            try
+            {
+                var reference = ParseRow(csv, columnMap, headerRecord);
+                if (reference != null)
+                    references.Add(reference);
+            }
+            catch (Exception)
+            {
+                // Skip malformed row and continue parsing
+            }
         }
 
         return references;

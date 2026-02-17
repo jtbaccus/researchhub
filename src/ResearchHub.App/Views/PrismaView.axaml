@@ -7,34 +7,50 @@
              x:Class="ResearchHub.App.Views.PrismaView"
              x:DataType="vm:PrismaViewModel">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
         <!-- Row 0: Toolbar -->
         <Border Grid.Row="0" Padding="15" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="PRISMA 2020 Flow Diagram"
                            FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="15,8"/>
-                    <Button Content="Export SVG" Click="ExportSvgButton_Click" Padding="15,8"/>
+                    <Button Content="Refresh (R)" Command="{Binding RefreshCommand}" Padding="15,8"/>
+                    <Button Content="Export SVG (Ctrl+E)" Click="ExportSvgButton_Click" Padding="15,8"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Row 1: Diagram content -->
+        <!-- Row 1: Error State -->
+        <Border Grid.Row="1" Padding="10" Margin="10,4" CornerRadius="4"
+                Background="#1AE74C3C"
+                IsVisible="{Binding HasError}">
+            <TextBlock Foreground="#E74C3C" TextWrapping="Wrap">
+                <Run Text="&#x26A0;"/>
+                <Run Text=" "/>
+                <Run Text="{Binding ErrorMessage}"/>
+            </TextBlock>
+        </Border>
+
+        <!-- Row 2: Diagram content -->
         <!-- Loading overlay -->
-        <Border Grid.Row="1" Background="#80000000" IsVisible="{Binding IsLoading}" ZIndex="10">
+        <Border Grid.Row="2" Background="#80000000" IsVisible="{Binding IsLoading}" ZIndex="10">
             <TextBlock Text="Loading..." FontSize="18" Foreground="White"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
 
         <!-- Empty state -->
-        <TextBlock Grid.Row="1" Text="No project data available. Open a project to view the PRISMA flow diagram."
-                   FontSize="14" Foreground="Gray" TextWrapping="Wrap"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   IsVisible="{Binding !HasCounts}"/>
+        <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    IsVisible="{Binding !HasCounts}">
+            <TextBlock Text="No project data available"
+                       FontSize="18" Foreground="#888888"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Open a project to view the PRISMA flow diagram."
+                       FontSize="13" Foreground="#AAAAAA"
+                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
 
         <!-- PRISMA Diagram -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                       IsVisible="{Binding HasCounts}">
             <Grid Margin="20" HorizontalAlignment="Center" VerticalAlignment="Top"
                   ColumnDefinitions="100,280,60,240"
@@ -197,5 +213,12 @@
                 </Border>
             </Grid>
         </ScrollViewer>
+
+        <!-- Row 3: Keyboard Shortcut Footer Bar -->
+        <Border Grid.Row="3" Padding="10,6"
+                Background="{DynamicResource SystemControlBackgroundChromeLowBrush}">
+            <TextBlock FontSize="11" Foreground="#888888" HorizontalAlignment="Center"
+                       Text="R Refresh    Ctrl+E Export SVG"/>
+        </Border>
     </Grid>
 </UserControl>

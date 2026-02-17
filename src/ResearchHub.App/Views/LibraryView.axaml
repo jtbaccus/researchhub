@@ -8,7 +8,7 @@
              x:Class="ResearchHub.App.Views.LibraryView"
              x:DataType="vm:LibraryViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Toolbar -->
         <Border Grid.Row="0" Padding="10" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <Grid ColumnDefinitions="*,Auto">
@@ -43,106 +43,151 @@
             </StackPanel>
         </Border>
 
+        <!-- Export Error State -->
+        <Border Grid.Row="2" Padding="10" Margin="10,0" CornerRadius="4"
+                Background="#1AE74C3C"
+                IsVisible="{Binding HasExportError}">
+            <TextBlock Foreground="#E74C3C" TextWrapping="Wrap">
+                <Run Text="&#x26A0;"/>
+                <Run Text=" Export failed: "/>
+                <Run Text="{Binding ExportErrorMessage}"/>
+            </TextBlock>
+        </Border>
+
         <!-- Main Content: Reference List + Detail View -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,350">
+        <Grid Grid.Row="3" ColumnDefinitions="*,350">
             <!-- Reference List -->
-            <ListBox Grid.Column="0" ItemsSource="{Binding FilteredReferences}"
-                     SelectedItem="{Binding SelectedReference}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:Reference">
-                        <Grid ColumnDefinitions="55,*,150" Margin="4,6">
-                            <TextBlock Grid.Column="0" Text="{Binding Year}" FontSize="12"
-                                       Foreground="Gray" VerticalAlignment="Top"/>
-                            <StackPanel Grid.Column="1" Margin="8,0">
-                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxLines="2"
-                                           TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding Journal}" FontSize="11" Foreground="Gray"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Authors[0]}" FontSize="12"
-                                       Foreground="Gray" TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Top"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+            <Grid Grid.Column="0">
+                <ListBox ItemsSource="{Binding FilteredReferences}"
+                         SelectedItem="{Binding SelectedReference}"
+                         IsVisible="{Binding !HasNoSearchResults}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:Reference">
+                            <Grid ColumnDefinitions="55,*,150" Margin="4,6">
+                                <TextBlock Grid.Column="0" Text="{Binding Year}" FontSize="12"
+                                           Foreground="Gray" VerticalAlignment="Top"/>
+                                <StackPanel Grid.Column="1" Margin="8,0">
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxLines="2"
+                                               TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Journal}" FontSize="11" Foreground="Gray"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Authors[0]}" FontSize="12"
+                                           Foreground="Gray" TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Top"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- No search results empty state -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            IsVisible="{Binding HasNoSearchResults}">
+                    <TextBlock Text="No references match your search"
+                               FontSize="18" Foreground="#888888"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try adjusting your search terms or clear the search box"
+                               FontSize="13" Foreground="#AAAAAA"
+                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Detail View -->
             <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     Padding="15" Margin="10,0,0,0">
-                <ScrollViewer IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <StackPanel Spacing="10" DataContext="{Binding SelectedReference}">
-                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/>
+                <Grid>
+                    <ScrollViewer IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Spacing="10" DataContext="{Binding SelectedReference}">
+                            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/>
 
-                        <TextBlock Text="{Binding Authors, Converter={x:Static vm:LibraryViewModel.AuthorsConverter}}"
-                                   FontStyle="Italic" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Authors, Converter={x:Static vm:LibraryViewModel.AuthorsConverter}}"
+                                       FontStyle="Italic" TextWrapping="Wrap"/>
 
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="{Binding Journal}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding Year, StringFormat='({0})'}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="{Binding Journal}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Year, StringFormat='({0})'}"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding Volume, StringFormat='Volume {0}'}"
+                                       IsVisible="{Binding Volume, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <TextBlock Text="{Binding Doi, StringFormat='DOI: {0}'}"
+                                       IsVisible="{Binding Doi, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <TextBlock Text="{Binding Pmid, StringFormat='PMID: {0}'}"
+                                       IsVisible="{Binding Pmid, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <Separator Margin="0,10"/>
+
+                            <TextBlock Text="Abstract" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding Abstract}" TextWrapping="Wrap" MaxHeight="300"/>
+
+                            <Separator Margin="0,10"/>
+
+                            <Button Content="Delete Reference"
+                                    Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).DeleteReferenceCommand}"
+                                    HorizontalAlignment="Left"/>
+
+                            <Separator Margin="0,10"/>
+
+                            <!-- PDF Attachments Section -->
+                            <TextBlock Text="PDF Attachments" FontWeight="Bold"/>
+                            <Button Content="Attach PDF" x:Name="AttachPdfButton"
+                                    HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
+
+                            <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).PdfAttachments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ReferencePdf">
+                                        <Border Padding="6,4" Margin="0,2"
+                                                Background="{DynamicResource SystemControlBackgroundChromeLowBrush}"
+                                                CornerRadius="4">
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding OriginalFileName}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Button Grid.Column="1" Content="Open"
+                                                        Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).OpenPdfCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="6,2" Margin="4,0" FontSize="12"/>
+                                                <Button Grid.Column="2" Content="Remove"
+                                                        Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).RemovePdfCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="6,2" FontSize="12"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="No PDFs attached" FontSize="12" Foreground="Gray"
+                                       IsVisible="{Binding !$parent[UserControl].((vm:LibraryViewModel)DataContext).HasPdfAttachments}"/>
                         </StackPanel>
+                    </ScrollViewer>
 
-                        <TextBlock Text="{Binding Volume, StringFormat='Volume {0}'}"
-                                   IsVisible="{Binding Volume, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                        <TextBlock Text="{Binding Doi, StringFormat='DOI: {0}'}"
-                                   IsVisible="{Binding Doi, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                        <TextBlock Text="{Binding Pmid, StringFormat='PMID: {0}'}"
-                                   IsVisible="{Binding Pmid, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                        <Separator Margin="0,10"/>
-
-                        <TextBlock Text="Abstract" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding Abstract}" TextWrapping="Wrap" MaxHeight="300"/>
-
-                        <Separator Margin="0,10"/>
-
-                        <Button Content="Delete Reference"
-                                Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).DeleteReferenceCommand}"
-                                HorizontalAlignment="Left"/>
-
-                        <Separator Margin="0,10"/>
-
-                        <!-- PDF Attachments Section -->
-                        <TextBlock Text="PDF Attachments" FontWeight="Bold"/>
-                        <Button Content="Attach PDF" x:Name="AttachPdfButton"
-                                HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
-
-                        <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).PdfAttachments}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:ReferencePdf">
-                                    <Border Padding="6,4" Margin="0,2"
-                                            Background="{DynamicResource SystemControlBackgroundChromeLowBrush}"
-                                            CornerRadius="4">
-                                        <Grid ColumnDefinitions="*,Auto,Auto">
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{Binding OriginalFileName}"
-                                                       VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <Button Grid.Column="1" Content="Open"
-                                                    Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).OpenPdfCommand}"
-                                                    CommandParameter="{Binding}"
-                                                    Padding="6,2" Margin="4,0" FontSize="12"/>
-                                            <Button Grid.Column="2" Content="Remove"
-                                                    Command="{Binding $parent[UserControl].((vm:LibraryViewModel)DataContext).RemovePdfCommand}"
-                                                    CommandParameter="{Binding}"
-                                                    Padding="6,2" FontSize="12"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="No PDFs attached" FontSize="12" Foreground="Gray"
-                                   IsVisible="{Binding !$parent[UserControl].((vm:LibraryViewModel)DataContext).HasPdfAttachments}"/>
+                    <!-- "Select a reference" prompt when nothing is selected -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                IsVisible="{Binding SelectedReference, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="Select a reference to view details"
+                                   FontSize="18" Foreground="#888888"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Click on a reference in the list to see its full details"
+                                   FontSize="13" Foreground="#AAAAAA"
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
-                </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
 
+        <!-- Keyboard Shortcut Footer Bar -->
+        <Border Grid.Row="4" Padding="10,6"
+                Background="{DynamicResource SystemControlBackgroundChromeLowBrush}">
+            <TextBlock FontSize="11" Foreground="#888888" HorizontalAlignment="Center"
+                       Text="Ctrl+I Import    Ctrl+F Search    Del Delete"/>
+        </Border>
+
         <!-- Loading Indicator -->
-        <Border Grid.Row="2" Background="#80000000"
+        <Border Grid.Row="3" Background="#80000000"
                 IsVisible="{Binding IsLoading}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200"/>

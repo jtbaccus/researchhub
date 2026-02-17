@@ -7,7 +7,7 @@
              x:Class="ResearchHub.App.Views.DashboardView"
              x:DataType="vm:DashboardViewModel">
 
-    <Grid RowDefinitions="Auto,*" Margin="20">
+    <Grid RowDefinitions="Auto,Auto,*" Margin="20">
         <!-- Welcome Section -->
         <StackPanel Grid.Row="0" Spacing="10" Margin="0,0,0,30">
             <TextBlock Text="{Binding WelcomeMessage}"
@@ -16,8 +16,19 @@
                        FontSize="14" Foreground="Gray"/>
         </StackPanel>
 
+        <!-- Error State -->
+        <Border Grid.Row="1" Padding="10" Margin="0,0,0,10" CornerRadius="4"
+                Background="#1AE74C3C"
+                IsVisible="{Binding HasError}">
+            <TextBlock Foreground="#E74C3C" TextWrapping="Wrap">
+                <Run Text="&#x26A0;"/>
+                <Run Text=" "/>
+                <Run Text="{Binding ErrorMessage}"/>
+            </TextBlock>
+        </Border>
+
         <!-- Main Content -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,*">
+        <Grid Grid.Row="2" ColumnDefinitions="*,*">
             <!-- Create New Project -->
             <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     CornerRadius="8" Padding="20" Margin="0,0,10,0">

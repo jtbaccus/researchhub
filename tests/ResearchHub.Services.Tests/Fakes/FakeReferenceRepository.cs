@@ -80,14 +80,30 @@ public class FakeReferenceRepository : IReferenceRepository
     }
 
     public Task<IEnumerable<Reference>> SearchAsync(int projectId, string searchTerm)
-        => throw new NotImplementedException();
+    {
+        var term = searchTerm.ToLower();
+        var result = _references.Where(r => r.ProjectId == projectId &&
+            (r.Title.ToLower().Contains(term) ||
+             (r.Abstract != null && r.Abstract.ToLower().Contains(term)) ||
+             (r.Journal != null && r.Journal.ToLower().Contains(term))));
+        return Task.FromResult(result);
+    }
 
     public Task<Reference?> GetByDoiAsync(int projectId, string doi)
-        => throw new NotImplementedException();
+    {
+        var result = _references.FirstOrDefault(r => r.ProjectId == projectId && r.Doi == doi);
+        return Task.FromResult(result);
+    }
 
     public Task<Reference?> GetByPmidAsync(int projectId, string pmid)
-        => throw new NotImplementedException();
+    {
+        var result = _references.FirstOrDefault(r => r.ProjectId == projectId && r.Pmid == pmid);
+        return Task.FromResult(result);
+    }
 
     public Task<IEnumerable<Reference>> GetWithScreeningDecisionsAsync(int projectId)
-        => throw new NotImplementedException();
+    {
+        var result = _references.Where(r => r.ProjectId == projectId).AsEnumerable();
+        return Task.FromResult(result);
+    }
 }

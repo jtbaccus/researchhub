@@ -3,6 +3,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ResearchHub.Core.Models;
+using ResearchHub.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -29,6 +30,18 @@ public partial class LibraryViewModel : ViewModelBase
     [ObservableProperty]
     private string _importStatus = string.Empty;
 
+    [ObservableProperty]
+    private string _importProgressText = "";
+
+    [ObservableProperty]
+    private double _importProgressPercentage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasExportError))]
+    private string _exportErrorMessage = "";
+
+    public bool HasExportError => !string.IsNullOrEmpty(ExportErrorMessage);
+
     public ObservableCollection<ReferencePdf> PdfAttachments { get; } = new();
 
     public bool HasPdfAttachments => PdfAttachments.Count > 0;
@@ -38,6 +51,8 @@ public partial class LibraryViewModel : ViewModelBase
 
     public int TotalReferences => References.Count;
     public int FilteredCount => FilteredReferences.Count;
+    public bool HasReferences => References.Count > 0;
+    public bool HasNoSearchResults => HasReferences && FilteredReferences.Count == 0;
 
     public LibraryViewModel(MainWindowViewModel mainViewModel)
     {
@@ -62,6 +77,8 @@ public partial class LibraryViewModel : ViewModelBase
             }
             OnPropertyChanged(nameof(TotalReferences));
             OnPropertyChanged(nameof(FilteredCount));
+            OnPropertyChanged(nameof(HasReferences));
+            OnPropertyChanged(nameof(HasNoSearchResults));
         }
         finally
         {
@@ -90,6 +107,7 @@ public partial class LibraryViewModel : ViewModelBase
             FilteredReferences.Add(reference);
         }
         OnPropertyChanged(nameof(FilteredCount));
+        OnPropertyChanged(nameof(HasNoSearchResults));
     }
 
     [RelayCommand]
@@ -99,12 +117,32 @@ public partial class LibraryViewModel : ViewModelBase
 
         IsLoading = true;
         ImportStatus = "Importing...";
+        ImportProgressText = "";
+        ImportProgressPercentage = 0;
         try
         {
             var path = file.Path.LocalPath;
-            var result = await App.LibraryService.ImportFromFileAsync(_mainViewModel.CurrentProject.Id, path);
 
-            ImportStatus = $"Imported {result.Imported} references ({result.Duplicates} duplicates, {result.Failed} failed)";
+            var progress = new Progress<ImportProgress>(p =>
+            {
+                ImportProgressPercentage = p.Total > 0 ? (double)p.Current / p.Total * 100.0 : 0;
+                ImportProgressText = $"Processing {p.Current}/{p.Total}: {Truncate(p.CurrentTitle, 60)}";
+            });
+
+            var result = await App.LibraryService.ImportFromFileAsync(_mainViewModel.CurrentProject.Id, path, progress);
+
+            var parts = new List<string>
+            {
+                $"Imported {result.Imported} references",
+                $"{result.Duplicates} duplicates"
+            };
+            if (result.Failed > 0) parts.Add($"{result.Failed} failed");
+            if (result.SkippedNoTitle > 0) parts.Add($"{result.SkippedNoTitle} skipped (no title)");
+
+            ImportStatus = string.Join(", ", parts);
+            if (result.Warnings.Count > 0)
+                ImportStatus += $" | Warnings: {string.Join("; ", result.Warnings)}";
+
             _mainViewModel.StatusMessage = ImportStatus;
 
             await LoadReferencesAsync();
@@ -116,7 +154,15 @@ public partial class LibraryViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+            ImportProgressText = "";
+            ImportProgressPercentage = 0;
         }
+    }
+
+    private static string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Length <= maxLength ? value : value[..maxLength] + "...";
     }
 
     [RelayCommand]
@@ -124,13 +170,21 @@ public partial class LibraryViewModel : ViewModelBase
     {
         if (App.LibraryService == null || _mainViewModel.CurrentProject == null) return;
 
-        // This would need file picker integration - placeholder for now
-        var fileName = $"export_{DateTime.Now:yyyyMMdd_HHmmss}.{format}";
-        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var filePath = System.IO.Path.Combine(desktopPath, fileName);
+        ExportErrorMessage = "";
+        try
+        {
+            // This would need file picker integration - placeholder for now
+            var fileName = $"export_{DateTime.Now:yyyyMMdd_HHmmss}.{format}";
+            var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var filePath = System.IO.Path.Combine(desktopPath, fileName);
 
-        await App.LibraryService.ExportToFileAsync(_mainViewModel.CurrentProject.Id, filePath, format);
-        _mainViewModel.StatusMessage = $"Exported to {filePath}";
+            await App.LibraryService.ExportToFileAsync(_mainViewModel.CurrentProject.Id, filePath, format);
+            _mainViewModel.StatusMessage = $"Exported to {filePath}";
+        }
+        catch (Exception ex)
+        {
+            ExportErrorMessage = ex.Message;
+        }
     }
 
     [RelayCommand]

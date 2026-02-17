@@ -34,9 +34,16 @@ public class RisParser : IReferenceParser
                 {
                     if (currentRef.Count > 0)
                     {
-                        var reference = CreateReferenceFromRis(currentRef);
-                        if (reference != null)
-                            references.Add(reference);
+                        try
+                        {
+                            var reference = CreateReferenceFromRis(currentRef);
+                            if (reference != null)
+                                references.Add(reference);
+                        }
+                        catch (Exception)
+                        {
+                            // Skip malformed entry and continue parsing
+                        }
                         currentRef.Clear();
                     }
                     lastTag = null;
@@ -66,9 +73,16 @@ public class RisParser : IReferenceParser
         // Handle case where file doesn't end with ER
         if (currentRef.Count > 0)
         {
-            var reference = CreateReferenceFromRis(currentRef);
-            if (reference != null)
-                references.Add(reference);
+            try
+            {
+                var reference = CreateReferenceFromRis(currentRef);
+                if (reference != null)
+                    references.Add(reference);
+            }
+            catch (Exception)
+            {
+                // Skip malformed trailing entry
+            }
         }
 
         return references;
@@ -76,7 +90,33 @@ public class RisParser : IReferenceParser
 
     public IEnumerable<Reference> ParseFile(string filePath)
     {
-        var content = File.ReadAllText(filePath, Encoding.UTF8);
+        // Encoding detection: check for BOM, try UTF-8, fall back to Latin-1
+        string content;
+        var rawBytes = File.ReadAllBytes(filePath);
+        if (rawBytes.Length >= 3 && rawBytes[0] == 0xEF && rawBytes[1] == 0xBB && rawBytes[2] == 0xBF)
+        {
+            // UTF-8 BOM
+            content = Encoding.UTF8.GetString(rawBytes);
+        }
+        else if (rawBytes.Length >= 2 && ((rawBytes[0] == 0xFF && rawBytes[1] == 0xFE) || (rawBytes[0] == 0xFE && rawBytes[1] == 0xFF)))
+        {
+            // UTF-16 BOM (LE or BE)
+            content = Encoding.Unicode.GetString(rawBytes);
+        }
+        else
+        {
+            try
+            {
+                content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+                    .GetString(rawBytes);
+            }
+            catch (DecoderFallbackException)
+            {
+                // Not valid UTF-8, fall back to Latin-1
+                content = Encoding.Latin1.GetString(rawBytes);
+            }
+        }
+
         var references = Parse(content).ToList();
         foreach (var reference in references)
         {
