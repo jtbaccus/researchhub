@@ -1,6 +1,6 @@
-# codex.md - ResearchHub
+# AGENTS.md - ResearchHub
 
-Inherit the workspace rules from `/home/jtbaccus/turing/codex.md`.
+Inherit the workspace rules from `/home/jtbaccus/turing/AGENTS.md`.
 
 ## Project Profile
 - .NET/C# application organized around `ResearchHub.sln`, `src/`, `tests/`, and `docs/`.
